@@ -47,7 +47,7 @@ async function postMessage(message){
 			try {
 				const query_res = await client.query(sql,values);
 				client.release();
-				return (query_res.rows[0]);
+				return (query_res);
 			} catch (err) {
 				client.release();
 				console.log(err.stack)
