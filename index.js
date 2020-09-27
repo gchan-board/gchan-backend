@@ -5,7 +5,7 @@ const bodyParser = require('body-parser');
 const morgan = require('morgan');
 
 const messages = require('./db/messages'); //require é no nome do arquivo sem a extensão
-
+const db =  require('./db/connection');
 const app = express();
 
 app.use(morgan('tiny'));
@@ -19,28 +19,17 @@ app.get('/',(req,res) => {
 });
 
 app.get('/messages', async (req,res) => {
-	// try {
-	// 	const client = await messages.connect();
-	// 	const result = await client.query('SELECT * FROM messages');
-	// 	const results = { 'results': (result) ? result.rows : null};
-	// 	res.json(results);
-	// 	client.release();
-	// 	} catch (err) {
-	// 	console.error(err);
-	// 	res.send("Error " + err);
-	// 	}
-	// messages.getAll();
-	res.json(messages.getAll());
+	messages.getAll().then((allMessages) => {
+		res.json(allMessages);
+	});
 });
 
-app.post('/messages', (req,res) => {
-	console.log(req.body);
-	messages.postMessage(req.body).then((message) => {
+app.post('/messages', async (req,res) => {
+
+	messages.postMessage(req).then((message) => {
 		res.json(message);
-	}).catch((error) => { //como a função retorna um Promise.reject, posso usar um catch
-		res.status(500);
-		res.json(error);
-	})
+	});
+	
 });
 
 

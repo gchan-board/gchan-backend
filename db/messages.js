@@ -16,43 +16,67 @@ const schema = Joi.object().keys({
 
 // const messages = db.get('messages');
 
-
-function getAll(){
-	const messages = db.connect()
-	.then((client) => {
-		client.query(query)
-			.then(res => {
-				let results;
-				for (let row of res.rows){
-					results.push(row);
-				}
-				return results;
-			})
-			.catch(err => {
-				console.error(err);
-			})
-	})
-	.catch(err => {
-		console.error(err)
-	});
-	return messages;
+async function getAll(){
+	try{
+		const client = await db.connect();
+		const result = await client.query('SELECT * FROM messages');
+		const results = { 'results': (result) ? result.rows : null};
+		client.release();
+		return results;
+	} catch (err){
+		console.error(err);
+		res.json( err );
+	}
 }
 
-function postMessage(message){
-	if (!message.username) message.username = 'Anonymous';
+async function postMessage(message){
+	const messageBody = message.body;
 
-	const result = schema.validate(message);
+	if (!messageBody.username) messageBody.username = 'Anonymous';
+	if (!messageBody.imageURL) messageBody.imageURL = '';
+
+	const result = schema.validate(messageBody);
 	if(result.error == null){
-		message.created = new Date();
-		return messages.insert(message);
+		messageBody.created = new Date();
+		try{
+			const sql = 'INSERT INTO messages (username, subject, message, imageURL, giphyURL, options, created) VALUES ($1,$2,$3,$4,$5,$6,$7)';
+			const values = [messageBody.username, messageBody.subject, messageBody.message, messageBody.imageURL,messageBody.giphyURL,messageBody.options,messageBody.created];
+
+			const client = await db.connect();
+			
+			try {
+				const query_res = await client.query(sql,values);
+				client.release();
+				return (query_res.rows[0]);
+			} catch (err) {
+				client.release();
+				console.log(err.stack)
+			}
+
+			
+			
+		} catch (err){
+			console.error(err);
+			return (err);
+		}
 	} else {
-		console.log(message);
 		return Promise.reject(result.error);
 	}
 
+
+
+
+
+}
+module.exports.postMessage = async function(){
+	return postMessage();
 }
 
+module.exports.getAll = async function(){
+	return getAll();
+}
 module.exports = {
 	postMessage,
-	getAll
+	getAll,
+	schema
 };
