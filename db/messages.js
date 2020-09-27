@@ -39,7 +39,7 @@ async function postMessage(message){
 	if(result.error == null){
 		messageBody.created = new Date();
 		try{
-			const sql = 'INSERT INTO messages (username, subject, message, imageURL, giphyURL, options, created) VALUES ($1,$2,$3,$4,$5,$6,$7)';
+			const sql = 'INSERT INTO messages (username, subject, message, imageURL, giphyURL, options, created) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id';
 			const values = [messageBody.username, messageBody.subject, messageBody.message, messageBody.imageURL,messageBody.giphyURL,messageBody.options,messageBody.created];
 
 			const client = await db.connect();
@@ -47,8 +47,17 @@ async function postMessage(message){
 			try {
 				const query_res = await client.query(sql,values);
 				client.release();
-				// return (query_res);
-				return JSON.stringify(values);
+				const returnJSON = {
+					username:values[0],
+					subject:values[1],
+					message:values[2],
+					imageurl:values[3],
+					giphyURL:values[4],
+					options:values[5],
+					created:values[6],
+					id:query_res.rows[0].id
+				};
+				return JSON.stringify(returnJSON);
 			} catch (err) {
 				client.release();
 				console.log(err.stack)
