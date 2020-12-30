@@ -18,7 +18,7 @@ app.use(morgan('tiny'));
 
 
 const corsOptions = {
-  origin: 'https://guites.github.io',
+  origin: process.env.CORS_ORIGIN_URL, // 'https://guites.github.io',
   credentials: true
 };
 app.use(cors(corsOptions));
@@ -120,6 +120,11 @@ app.post('/messages', async (req,res) => {
 	});
 	
 });
+
+app.post('/slack', (req, res) => {
+  console.log(req.body);
+  return res.json('slack');
+})
 
 app.delete('/logout', (req, res) => {
   req.logOut();
