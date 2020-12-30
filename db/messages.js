@@ -11,7 +11,8 @@ const schema = Joi.object().keys({
 		]
 	}).allow(''),
 	giphyURL: Joi.string(),
-	options: Joi.string(),
+  options: Joi.string(),
+  user_id: Joi.number(),
 });
 
 // const messages = db.get('messages');
@@ -29,8 +30,32 @@ async function getAll(){
 	}
 }
 
+async function deleteMessage(messageID){
+  try {
+    const sql = 'DELETE FROM messages WHERE id = $1 RETURNING id';
+    const values = [messageID];
+    const client = await db.connect();
+    try {
+      const query_res = await client.query(sql,values);
+      client.release();
+      console.log(query_res);
+      if(query_res.rows.length > 0){
+        return ({'id': query_res.rows[0].id});
+      }
+      return (false);
+    } catch (err) {
+      console.log(err.stack);
+      return(err);
+    }
+  } catch (err) {
+    console.log(err);
+    return (err);
+  }
+}
+
 async function postMessage(message){
-	const messageBody = message.body;
+  const messageBody = message.body;
+  console.log(messageBody);
 
 	if (!messageBody.username) messageBody.username = 'Anonymous';
 	if (!messageBody.imageURL) messageBody.imageURL = '';
@@ -39,8 +64,8 @@ async function postMessage(message){
 	if(result.error == null){
 		messageBody.created = new Date();
 		try{
-			const sql = 'INSERT INTO messages (username, subject, message, imageURL, giphyURL, options, created) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id';
-			const values = [messageBody.username, messageBody.subject, messageBody.message, messageBody.imageURL,messageBody.giphyURL,messageBody.options,messageBody.created];
+			const sql = 'INSERT INTO messages (username, subject, message, imageURL, giphyURL, options, created, user_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id';
+			const values = [messageBody.username, messageBody.subject, messageBody.message, messageBody.imageURL,messageBody.giphyURL,messageBody.options,messageBody.created,messageBody.user_id];
 
 			const client = await db.connect();
 			
@@ -55,7 +80,8 @@ async function postMessage(message){
 					giphyURL:values[4],
 					options:values[5],
 					created:values[6],
-					id:query_res.rows[0].id
+          id:query_res.rows[0].id,
+          user_id:values[7],
 				};
 				return JSON.stringify(returnJSON);
 			} catch (err) {
@@ -72,12 +98,12 @@ async function postMessage(message){
 	} else {
 		return Promise.reject(result.error);
 	}
-
-
-
-
-
 }
+
+module.exports.deleteMessage = async function(){
+  return deleteMessage();
+}
+
 module.exports.postMessage = async function(){
 	return postMessage();
 }
@@ -87,6 +113,7 @@ module.exports.getAll = async function(){
 }
 module.exports = {
 	postMessage,
-	getAll,
+  getAll,
+  deleteMessage,
 	schema
 };

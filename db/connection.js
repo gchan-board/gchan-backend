@@ -1,4 +1,3 @@
-// const monk = require('monk');
 const { Pool } = require('pg');
 const connectionString = process.env.DATABASE_URL;
 const db = new Pool({

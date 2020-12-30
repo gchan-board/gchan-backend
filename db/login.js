@@ -1,0 +1,1 @@
+const db = require('./connection'); //relative path to file that exports
