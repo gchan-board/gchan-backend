@@ -18,7 +18,7 @@ app.use(morgan('tiny'));
 
 
 const corsOptions = {
-  origin: 'https://guites.github.io/g',
+  origin: 'https://guites.github.io',
   credentials: true
 };
 app.use(cors(corsOptions));
