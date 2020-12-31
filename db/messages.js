@@ -75,7 +75,7 @@ async function deleteMessage(messageID){
 async function postMessageFromSlack(post){
   const postBody = post.body;
   if(postBody.token != process.env.SLACK_TOKEN) return res.json('invalid slack token');
-  const result = schema.validate(postBody);
+  const result = slackSchema.validate(postBody);
   if(result.error == null){
     const message = {};
     const payload = postBody.text.split(';');
