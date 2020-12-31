@@ -86,7 +86,8 @@ async function postMessageFromSlack(post){
     } else {
       message.username = postBody.user_name;  
     }
-    message.user_id = postBody.user_id;
+    message.slack_id = postBody.user_id;
+    message.user_id = 0;
     message.subject = 'slackin';
     message.message = payload[0];
     message.imageURL = payload[1].trim();
