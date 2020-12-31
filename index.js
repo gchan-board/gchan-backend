@@ -121,9 +121,11 @@ app.post('/messages', async (req,res) => {
 	
 });
 
-app.post('/slack', (req, res) => {
+app.post('/slack', async (req, res) => {
   console.log(req.body);
-  return res.json('slack');
+  messages.postMessageFromSlack(req).then((message) => {
+    res.json(message);
+  });
 })
 
 app.delete('/logout', (req, res) => {
