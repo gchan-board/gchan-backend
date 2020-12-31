@@ -26,12 +26,13 @@ const slackSchema = Joi.object().keys({
   command: Joi.string().required(),
   text: Joi.string().required(),
   api_app_id: Joi.string().alphanum().required(),
+  is_enterprise_install: Joi.string().max(5),
   response_url: Joi.string().uri({
     scheme: [
       /https/
     ]
   }),
-  trigger_id: Joi.string().alphanum().required(),
+  trigger_id: Joi.string().required(),
 });
 
 // const messages = db.get('messages');
