@@ -13,6 +13,7 @@ const schema = Joi.object().keys({
 	giphyURL: Joi.string(),
   options: Joi.string(),
   user_id: Joi.number(),
+  gif_origin: Joi.string(),
 });
 
 const slackSchema = Joi.object().keys({
@@ -123,12 +124,13 @@ async function postMessage(message){
 	if(result.error == null){
 		messageBody.created = new Date();
 		try{
-			const sql = 'INSERT INTO messages (username, subject, message, imageURL, giphyURL, options, created, user_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id';
-			const values = [messageBody.username, messageBody.subject, messageBody.message, messageBody.imageURL,messageBody.giphyURL,messageBody.options,messageBody.created,messageBody.user_id];
-			const client = await db.connect();
+			const sql = 'INSERT INTO messages (username, subject, message, imageURL, giphyURL, options, created, user_id, gif_origin) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id';
+			const values = [messageBody.username, messageBody.subject, messageBody.message, messageBody.imageURL,messageBody.giphyURL,messageBody.options,messageBody.created,messageBody.user_id, messageBody.gif_origin];
+      const client = await db.connect();
 			try {
 				const query_res = await client.query(sql,values);
-				client.release();
+        client.release();
+        console.log(query_res);
 				const returnJSON = {
 					username:values[0],
 					subject:values[1],
@@ -139,10 +141,11 @@ async function postMessage(message){
 					created:values[6],
           id:query_res.rows[0].id,
           user_id:values[7],
+          gif_origin:values[8]
 				};
 				return JSON.stringify(returnJSON);
 			} catch (err) {
-				client.release();
+        console.log(err);
 				console.log(err.stack)
 			}
 		} catch (err){
