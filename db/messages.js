@@ -47,7 +47,6 @@ async function getAll(){
 		return results;
 	} catch (err){
 		console.error(err);
-		res.json( err );
 	}
 }
 
@@ -146,9 +145,17 @@ async function postMessage(message){
 				return JSON.stringify(returnJSON);
 			} catch (err) {
         console.log(err);
-				console.log(err.stack)
+        console.log(err.stack);
+        if (err.code == "23505") {
+         return {
+           error: true,
+           origin: 'psql',
+           code: '23505'
+         };
+        }
 			}
 		} catch (err){
+      console.log('lmao');
 			console.error(err);
 			return (err);
 		}

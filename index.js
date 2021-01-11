@@ -51,10 +51,16 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 app.get('/',(req,res) => {
-	res.json({
+  console.log(req.hostname);
+  res.json({
 		message: "fullstack msg board."
 	})
 });
+
+app.post('/', (req,res) => {
+  console.log('post to /');
+  return res.json('lel');
+})
 
 app.get('/messages', async (req,res) => {
   // const allMsgs = {};
