@@ -41,7 +41,7 @@ const slackSchema = Joi.object().keys({
 async function getAll(){
 	try{
 		const client = await db.connect();
-		const result = await client.query('SELECT * FROM messages');
+		const result = await client.query('SELECT * FROM messages ORDER BY id');
 		const results = { 'results': (result) ? result.rows : null};
 		client.release();
 		return results;
