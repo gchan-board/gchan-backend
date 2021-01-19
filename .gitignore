@@ -3,3 +3,4 @@ psql_local.sh
 heroku.log
 .env
 fix_db.sql
+postgressing.txt

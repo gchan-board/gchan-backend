@@ -11,6 +11,7 @@ const morgan = require('morgan');
 
 const login = require('./db/login');
 const messages = require('./db/messages'); //require é no nome do arquivo sem a extensão
+const marquees = require('./db/marquees');
 const db =  require('./db/connection');
 const app = express();
 
@@ -74,6 +75,12 @@ app.get('/messages', async (req,res) => {
 	});
 });
 
+app.get('/marquee', async (req, res) => {
+  marquees.getAll().then((allMarquees) => {
+    res.json(allMarquees);
+  });
+});
+
 // app.post('/login', passport.authenticate('local', {
 //   successRedirect: '/',
 //   failureRedirect: '/login',
@@ -125,6 +132,14 @@ app.post('/messages', async (req,res) => {
 		res.json(message);
 	});
 	
+});
+
+app.post('/marquee', async (req, res) => {
+
+  marquees.postMarquee(req).then((marquee) => {
+    res.json(marquee);
+  });
+
 });
 
 app.post('/slack', async (req, res) => {
