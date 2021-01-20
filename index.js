@@ -136,7 +136,7 @@ app.post('/messages', async (req,res) => {
 
 app.post('/marquee', async (req, res) => {
 
-  marquees.postMarquee(req).then((marquee) => {
+  marquees.postMarquee(req.body).then((marquee) => {
     res.json(marquee);
   });
 
