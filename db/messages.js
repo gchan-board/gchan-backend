@@ -155,12 +155,11 @@ async function postMessage(message){
         }
 			}
 		} catch (err){
-      console.log('lmao');
 			console.error(err);
 			return (err);
 		}
 	} else {
-		return Promise.reject(result.error);
+    return result.error; 
 	}
 }
 
