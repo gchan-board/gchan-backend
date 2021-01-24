@@ -12,6 +12,7 @@ const morgan = require('morgan');
 const login = require('./db/login');
 const messages = require('./db/messages'); //require é no nome do arquivo sem a extensão
 const marquees = require('./db/marquees');
+const replies = require('./db/replies');
 const db =  require('./db/connection');
 const app = express();
 
@@ -75,6 +76,10 @@ app.get('/messages', async (req,res) => {
 	});
 });
 
+app.get('/replies/:id', async (req, res) => {
+  replies.getReplyFromMessageId(req.params.id).then(replies => res.json(replies));
+})
+
 app.get('/marquee', async (req, res) => {
   marquees.getAll().then((allMarquees) => {
     res.json(allMarquees);
@@ -133,6 +138,14 @@ app.post('/messages', async (req,res) => {
 	});
 	
 });
+
+app.post('/replies', async (req, res) => {
+
+  replies.postReply(req).then((reply) => {
+    res.json(reply);
+  })
+
+})
 
 app.post('/marquee', async (req, res) => {
 

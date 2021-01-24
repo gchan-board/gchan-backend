@@ -179,7 +179,7 @@ module.exports.getAll = async function(){
 }
 module.exports = {
   postMessageFromSlack,
-	postMessage,
+  postMessage,
   getAll,
   deleteMessage,
 	schema
