@@ -3,7 +3,7 @@ const db = require('./connection'); //relative path to file that exports
 
 const schema = Joi.object().keys({
 	username: Joi.string().max(30).required(),
-	subject: Joi.string().required(),
+	subject: Joi.string().max(50).required(),
 	message: Joi.string().max(250).required(),
 	imageURL: Joi.string().uri({
 		scheme: [
