@@ -4,7 +4,7 @@ const db = require('./connection'); //relative path to file that exports
 
 const replySchema = Joi.object().keys({
   message_id: Joi.string().alphanum().required(),
-	username: Joi.string().alphanum().required(),
+	username: Joi.string().max(30).required(),
 	content: Joi.string().max(250).required(),
 	imageURL: Joi.string().uri({
 		scheme: [
@@ -28,7 +28,6 @@ async function postReply(reply) {
 			try {
 				const query_res = await client.query(sql,values);
         client.release();
-        console.log(query_res);
 				const returnJSON = {
           message_id:values[5],
 					username:values[0],
@@ -40,8 +39,6 @@ async function postReply(reply) {
 				};
 				return JSON.stringify(returnJSON);
 			} catch (err) {
-        console.log(err);
-        console.log(err.stack);
         if (err.code == "23505") {
          return {
            error: true,
@@ -77,11 +74,9 @@ async function getReplyFromMessageId(message_id) {
         };
       }
     } catch (err) {
-      console.log(err);
-      console.log(err.stack);
+      return err;
     }
   } catch (err){
-    console.error(err);
     return (err);
   }
 }

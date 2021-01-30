@@ -2,7 +2,7 @@ const Joi = require('joi');
 const db = require('./connection'); //relative path to file that exports
 
 const schema = Joi.object().keys({
-	username: Joi.string().alphanum().required(),
+	username: Joi.string().max(30).required(),
 	subject: Joi.string().required(),
 	message: Joi.string().max(250).required(),
 	imageURL: Joi.string().uri({
@@ -58,17 +58,14 @@ async function deleteMessage(messageID){
     try {
       const query_res = await client.query(sql,values);
       client.release();
-      console.log(query_res);
       if(query_res.rows.length > 0){
         return ({'id': query_res.rows[0].id});
       }
       return (false);
     } catch (err) {
-      console.log(err.stack);
       return(err);
     }
   } catch (err) {
-    console.log(err);
     return (err);
   }
 }
@@ -103,7 +100,6 @@ async function postMessageFromSlack(post){
         return JSON.stringify({'url': process.env.CORS_ORIGIN_URL + '/g', 'mensagem': 'obrigado por usar o gchan (⌐■_■)'});
       } catch(err){
         client.release();
-				console.log(err.stack)
       }
     } catch(err) {
 			console.error(err);
@@ -116,7 +112,6 @@ async function postMessageFromSlack(post){
 
 async function postMessage(message){
   const messageBody = message.body;
-  console.log(messageBody);
 	if (!messageBody.username) messageBody.username = 'Anonymous';
 	if (!messageBody.imageURL) messageBody.imageURL = '';
 	const result = schema.validate(messageBody);
@@ -129,7 +124,6 @@ async function postMessage(message){
 			try {
 				const query_res = await client.query(sql,values);
         client.release();
-        console.log(query_res);
 				const returnJSON = {
 					username:values[0],
 					subject:values[1],
@@ -144,8 +138,6 @@ async function postMessage(message){
 				};
 				return JSON.stringify(returnJSON);
 			} catch (err) {
-        console.log(err);
-        console.log(err.stack);
         if (err.code == "23505") {
          return {
            error: true,
