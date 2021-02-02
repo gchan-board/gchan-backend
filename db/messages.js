@@ -13,7 +13,7 @@ const schema = Joi.object().keys({
 	giphyURL: Joi.string(),
   options: Joi.string(),
   user_id: Joi.number(),
-  gif_origin: Joi.string(),
+  gif_origin: Joi.string().allow(''),
 });
 
 const slackSchema = Joi.object().keys({
@@ -41,7 +41,7 @@ const slackSchema = Joi.object().keys({
 async function getAll(){
 	try{
 		const client = await db.connect();
-		const result = await client.query('SELECT * FROM messages ORDER BY id');
+		const result = await client.query('SELECT * FROM messages ORDER BY updated_at DESC, id DESC');
 		const results = { 'results': (result) ? result.rows : null};
 		client.release();
 		return results;

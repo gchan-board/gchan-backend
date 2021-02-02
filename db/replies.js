@@ -27,7 +27,6 @@ async function postReply(reply) {
       const client = await db.connect();
 			try {
 				const query_res = await client.query(sql,values);
-        client.release();
 				const returnJSON = {
           message_id:values[5],
 					username:values[0],
@@ -36,8 +35,21 @@ async function postReply(reply) {
 					created:values[3],
           id:query_res.rows[0].id,
           user_id:values[4],
-				};
-				return JSON.stringify(returnJSON);
+        };
+        try {
+          const updated_sql = 'UPDATE messages SET updated_at = NOW() WHERE id = $1';
+          const updated_values = [replyBody.message_id];
+          try {
+            const updated_query = await client.query(updated_sql, updated_values);
+            console.log('updated_query has ran.');
+            client.release();
+            return JSON.stringify(returnJSON);
+          } catch (err) {
+            return JSON.stringify(returnJSON);
+          }
+        } catch (err) {
+          return JSON.stringify(returnJSON);
+        }
 			} catch (err) {
         if (err.code == "23505") {
          return {
@@ -50,7 +62,7 @@ async function postReply(reply) {
 		} catch (err){
 			console.error(err);
 			return (err);
-		}
+    }
 	} else {
     return result.error; 
 	}
