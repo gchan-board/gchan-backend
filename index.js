@@ -105,6 +105,10 @@ app.get('/placeholders', async function(req, res, next) {
   })
 });
 
+app.get('/placeholders/:file', function(req, res, next) {
+  res.sendFile(__dirname + '/placeholders/' + req.params.file);
+});
+
 app.post('/login', function(req, res, next) {
   // console.log(req.body);
   passport.authenticate('local', function(err, user, info) {
