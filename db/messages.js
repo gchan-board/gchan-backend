@@ -3,7 +3,7 @@ const db = require('./connection'); //relative path to file that exports
 
 const schema = Joi.object().keys({
 	username: Joi.string().max(30).required(),
-	subject: Joi.string().max(50).required(),
+	subject: Joi.string().max(50).allow(''),
 	message: Joi.string().max(250).required(),
 	imageURL: Joi.string().uri({
 		scheme: [
@@ -77,11 +77,11 @@ async function postMessageFromSlack(post){
   if(result.error == null){
     const message = {};
     const payload = postBody.text.split(';');
-    if(payload.length < 2) return JSON.stringify({'url': process.env.CORS_ORIGIN_URL + '/g', 'mensagem': '(⌐■_■) utilize no formato /gchan minha mensagem ; https://wwww.urldaminhaimagem.com/ou_gif/ou_video'});
+    if(payload.length < 2) return JSON.stringify({'url': process.env.CORS_ORIGIN_URL + '/g', 'mensagem': '(⌐■_■) utilize no formato /gchan minha mensagem ; https://wwww.urldaminhaimagem.com/ou_gif/ou_video ; meu nome (em branco fica anônimo)'});
     if(payload.length > 2){
-      message.username = 'Anonymous';
+      message.username = payload[2].trim();
     } else {
-      message.username = postBody.user_name;  
+      message.username = 'anônimo';  
     }
     message.slack_id = postBody.user_id;
     message.user_id = 0;
