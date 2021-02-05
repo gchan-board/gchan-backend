@@ -41,7 +41,6 @@ async function postReply(reply) {
           const updated_values = [replyBody.message_id];
           try {
             const updated_query = await client.query(updated_sql, updated_values);
-            console.log('updated_query has ran.');
             client.release();
             return JSON.stringify(returnJSON);
           } catch (err) {

@@ -13,11 +13,11 @@ const login = require('./db/login');
 const messages = require('./db/messages'); //require é no nome do arquivo sem a extensão
 const marquees = require('./db/marquees');
 const replies = require('./db/replies');
+const placeholders = require('./db/placeholders');
 const db =  require('./db/connection');
 const app = express();
 
 app.use(morgan('tiny'));
-
 
 const corsOptions = {
   origin: process.env.CORS_ORIGIN_URL, // 'https://guites.github.io',
@@ -97,8 +97,13 @@ app.get('/login', function (req, res, next) {
   } else {
     return res.send(false);
   }
-})
+});
 
+app.get('/placeholders', async function(req, res, next) {
+  placeholders.getRandom().then((placeholder) => {
+    res.redirect(req.protocol + '://' + req.get('host') + '/placeholders/' + placeholder.results[0].file);
+  })
+});
 
 app.post('/login', function(req, res, next) {
   // console.log(req.body);
@@ -113,7 +118,7 @@ app.post('/login', function(req, res, next) {
       }
     })
   })(req,res,next);
-})
+});
 
 app.post('/register', async function(req, res, next) {
   try {
