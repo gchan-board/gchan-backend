@@ -101,7 +101,8 @@ app.get('/login', function (req, res, next) {
 
 app.get('/placeholders', async function(req, res, next) {
   placeholders.getRandom().then((placeholder) => {
-    res.redirect(req.protocol + '://' + req.get('host') + '/placeholders/' + placeholder.results[0].file);
+    const protc = req.secure ? 'https://' : 'http://';
+    res.redirect(protc + req.get('host') + '/placeholders/' + placeholder.results[0].file);
   })
 });
 
