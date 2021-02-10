@@ -4,5 +4,4 @@ heroku.log
 .env
 fix_db.sql
 postgressing.txt
-latest.dump.1
-latest.dump
+latest.dump*

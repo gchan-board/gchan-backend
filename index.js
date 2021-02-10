@@ -8,12 +8,17 @@ const session = require('express-session');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const morgan = require('morgan');
+// para receber imagens/videos e enviar pro imgur
+const fileUpload = require('express-fileupload');
+const multer  = require('multer');
+const upload = multer({ dest: "uploads/" });
 
 const login = require('./db/login');
 const messages = require('./db/messages'); //require é no nome do arquivo sem a extensão
 const marquees = require('./db/marquees');
 const replies = require('./db/replies');
 const placeholders = require('./db/placeholders');
+const imgur = require('./db/imgur');
 const db =  require('./db/connection');
 const app = express();
 
@@ -26,6 +31,10 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
+
+// para receber imagens/videos e enviar pro imgur
+
+app.use(fileUpload());
 
 app.use(flash());
 const initializePassport = require('./db/passport-config');
@@ -170,6 +179,14 @@ app.post('/slack', async (req, res) => {
   messages.postMessageFromSlack(req).then((message) => {
     res.json(message);
   });
+})
+
+app.post('/imgur', async (req, res) => {
+  // console.log(req.body, req.file);
+  imgur.postImg(req.body).then(resp => {
+    console.log(resp);
+    res.json(resp);
+  })
 })
 
 app.delete('/logout', (req, res) => {
