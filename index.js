@@ -181,12 +181,26 @@ app.post('/slack', async (req, res) => {
   });
 })
 
-app.post('/imgur', async (req, res) => {
+app.post('/imgupload', async (req, res) => {
   // console.log(req.body, req.file);
   imgur.postImg(req.body).then(resp => {
     console.log(resp);
     res.json(resp);
   })
+})
+
+app.post('/videoupload', async (req, res) => {
+
+  imgur.postVideo(req.body.video).then(resp => {
+    res.json(resp);
+  })
+
+  // require("fs").writeFile("out.mp4", req.body.video, 'base64', function(err) {
+  //   imgur.postVideo('out.mp4').then(resp => {
+  //     console.log(resp);
+  //     res.json(resp);
+  //   })
+  // })
 })
 
 app.delete('/logout', (req, res) => {
