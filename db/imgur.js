@@ -1,7 +1,6 @@
 const fetch = require('node-fetch');
 const FormData = require('form-data');
 const fs = require("fs");
-const path = require('path');
 
 async function postImg(post) {
 
@@ -12,6 +11,7 @@ async function postImg(post) {
     method: 'POST',
     headers: {
       Authorization: "Client-ID 3435e574a9859d1",
+      // 'Content-Type': "application/octet-stream",
     },
     body: formdata,
     redirect: 'follow'
@@ -23,23 +23,28 @@ async function postImg(post) {
 }
 
 
-async function postVideo(video) {
+async function postVideo(filepath, filename) {
   var formdata = new FormData();
-  formdata.append("video", video);
-  formdata.append("type", 'base64');
+    if (fs.existsSync(filepath)) {
+      //file exists
+      const videoFile = fs.readFileSync(filepath);
+      formdata.append("video", videoFile,filename);
+      var requestOptions = {
+        method: 'POST',
+        headers: {
+          Authorization: "Client-ID 3435e574a9859d1",
+        },
+        body: formdata,
+        redirect: 'follow'
+      };
+    
+      return fetch("https://api.imgur.com/3/upload", requestOptions)
+      .then(response => response.json())
+      .catch(error => error);
+    } else {
+      return {error: 'erro na conexão com imgur.'};
+    }
 
-  var requestOptions = {
-    method: 'POST',
-    headers: {
-      Authorization: "Client-ID 3435e574a9859d1",
-    },
-    body: formdata,
-    redirect: 'follow'
-  };
-
-  return fetch("https://api.imgur.com/3/upload", requestOptions)
-  .then(response => response.json())
-  .catch(error => error.json());
 }
 
 // async function postVideo(video) {
