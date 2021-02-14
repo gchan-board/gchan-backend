@@ -11,7 +11,7 @@ const morgan = require('morgan');
 
 const unless = function(path, middleware) {
   return function(req, res, next) {
-    if (path === req.path) {
+    if (path.includes(req.path)) {
         return next();
     } else {
         return middleware(req, res, next);
@@ -45,7 +45,7 @@ const db =  require('./db/connection');
 const app = express();
 
 
-app.use(unless('/videoupload', fileUpload()));
+app.use(unless(['/videoupload','/gifupload'], fileUpload()));
 
 app.use(morgan('tiny'));
 
@@ -86,14 +86,12 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 app.get('/',(req,res) => {
-  console.log(req.hostname);
   res.json({
 		message: "fullstack msg board."
 	})
 });
 
 app.post('/', (req,res) => {
-  console.log('post to /');
   return res.json('lel');
 })
 
@@ -207,13 +205,15 @@ app.post('/slack', async (req, res) => {
 
 // app.use(fileUpload());
 app.post('/imgupload', async (req, res) => {
-  console.log(req.body);
   imgur.postImg(req.body).then(resp => {
-    console.log(resp);
     res.json(resp);
   })
 })
-
+app.post('/gifupload', upload.single('image'), async (req, res) => {
+  imgur.postGif(req.file.path, req.file.originalname).then(resp => {
+    res.json(resp);
+  })
+})
 app.post('/videoupload', upload.single('video'), async (req, res) => {
   imgur.postVideo(req.file.path, req.file.originalname).then(resp => {
     res.json(resp);
@@ -235,7 +235,11 @@ app.delete('/message/:id', (req, res) => {
   }
 })
 
-
+app.delete('/imgur/:deletehash', (req, res) => {
+	imgur.deleteImgur(req.params.deletehash).then(resp => {
+		res.json(resp);
+	})
+})
 // function checkAuthenticated(req, res, next){
 //   if(req.isAuthenticated)
 // }
