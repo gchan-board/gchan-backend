@@ -45,7 +45,7 @@ const db =  require('./db/connection');
 const app = express();
 
 
-app.use(unless(['/videoupload','/gifupload'], fileUpload()));
+app.use(unless(['/videoupload','/gifupload','/imgupload'], fileUpload()));
 
 app.use(morgan('tiny'));
 
@@ -204,8 +204,13 @@ app.post('/slack', async (req, res) => {
 })
 
 // app.use(fileUpload());
-app.post('/imgupload', async (req, res) => {
-  imgur.postImg(req.body).then(resp => {
+// app.post('/imgupload', async (req, res) => {
+//   imgur.postImg(req.body).then(resp => {
+//     res.json(resp);
+//   })
+// })
+app.post('/imgupload', upload.single('image'), async (req, res) => {
+  imgur.postImg(req.file.path, req.file.originalname).then(resp => {
     res.json(resp);
   })
 })
