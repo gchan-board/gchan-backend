@@ -107,6 +107,10 @@ app.get('/messages', async (req,res) => {
 	});
 });
 
+app.get('/message/:id', async (req, res) => {
+  messages.getOne(req.params.id).then((message) => res.json(message));
+})
+
 app.get('/replies/:id', async (req, res) => {
   replies.getReplyFromMessageId(req.params.id).then(replies => res.json(replies));
 })
