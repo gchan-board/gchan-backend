@@ -107,6 +107,12 @@ app.get('/messages', async (req,res) => {
 	});
 });
 
+app.get('/messages/:offset', async (req, res) => {
+  messages.getAllOffset(req.params.offset).then((messages) => {
+    res.json(messages);
+  })
+})
+
 app.get('/message/:id', async (req, res) => {
   messages.getOne(req.params.id).then((message) => res.json(message));
 })

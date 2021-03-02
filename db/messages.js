@@ -1,4 +1,5 @@
 const Joi = require('joi');
+const { query } = require('./connection');
 const db = require('./connection'); //relative path to file that exports
 
 const schema = Joi.object().keys({
@@ -48,6 +49,35 @@ async function getAll(){
 	} catch (err){
 		console.error(err);
 	}
+}
+
+async function getAllOffset(offset) {
+  try {
+    const client = await db.connect();
+    const sql = 'SELECT * FROM messages ORDER BY updated_at DESC, id DESC OFFSET $1 LIMIT 15';
+    const value = [offset];
+    try {
+      const query_res = await client.query(sql, value);
+      client.release();
+      if (query_res.rows.length > 0) {
+        const results = {'results': (query_res) ? query_res.rows : null };
+        return results;
+      } else {
+        return {
+          error: true,
+          origin: 'psql',
+          code: 'no results'
+        };
+      }
+
+    } catch (err) {
+      console.log('getAllOffset --- client.query error');
+      console.log(err);
+    }
+  } catch (err) {
+    console.log('getAllOffset --- db.connect error');
+    console.log(err);
+  }
 }
 
 async function getOne(id) {
@@ -200,6 +230,10 @@ module.exports.getAll = async function(){
 	return getAll();
 }
 
+module.exports.getAllOffset = async function(){
+	return getAllOffset();
+}
+
 module.exports.getOne = async function(){
 	return getOne();
 }
@@ -207,6 +241,7 @@ module.exports = {
   postMessageFromSlack,
   postMessage,
   getAll,
+  getAllOffset,
   getOne,
   deleteMessage,
 	schema
