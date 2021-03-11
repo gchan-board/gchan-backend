@@ -172,7 +172,7 @@ async function postMessageFromSlack(post){
 
 async function postMessage(message){
   const messageBody = message.body;
-	if (!messageBody.username) messageBody.username = 'Anonymous';
+	if (!messageBody.username) messageBody.username = 'anônimo';
 	if (!messageBody.imageURL) messageBody.imageURL = '';
 	const result = schema.validate(messageBody);
 	if(result.error == null){
