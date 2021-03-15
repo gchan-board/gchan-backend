@@ -15,6 +15,7 @@ const schema = Joi.object().keys({
   options: Joi.string(),
   user_id: Joi.number(),
   gif_origin: Joi.string().allow(''),
+  recaptcha_token: Joi.string().allow(''),
 });
 
 const slackSchema = Joi.object().keys({
