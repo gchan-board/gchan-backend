@@ -174,11 +174,28 @@ async function postMessageFromSlack(post){
   }
 }
 
-async function testCaptcha(token, ip) {
+
+async function logIp(ip_array, score) {
+  try {
+    const sql = 'INSERT INTO ip_logs (x_real_ip, remoteAddress, x_forwarded_for, score) VALUES ($1, $2, $3, $4)';
+    ip_array.push(score)
+    const values = ip_array;
+    const client = await db.connect();
+    try {
+      const query_res = client.query(sql, values);
+      client.release();
+    } catch (err) {
+      console.log('erro logId client.query, ', err);
+    }
+  } catch (err) {
+    console.log('erro logId db.connect, ', err);
+  }
+}
+
+async function testCaptcha(token) {
   var formdata = new FormData();
   formdata.append("secret", process.env.RECAPTCHA3_KEY);
   formdata.append("response", token);
-  console.log('request from ip: ', ip);
   var requestOptions = {
     method: 'POST',
     body: formdata,
@@ -195,50 +212,72 @@ async function postMessage(message){
   const x_real_ip = messageHeaders['x-real-ip'];
   const connection_remote_address = messageConnection.remoteAddress;
   const x_forwarded_for = messageHeaders['x-forwarded-for'];
-  console.log('IPs received: ', [x_real_ip, connection_remote_address, x_forwarded_for])
-  // const captchaResponse = await testCaptcha(messageBody.recaptcha_token, [x_real_ip, connection_remote_address, x_forwarded_for]);
-  // console.log(captchaResponse);
-	if (!messageBody.username) messageBody.username = 'anônimo';
-	if (!messageBody.imageURL) messageBody.imageURL = '';
-	const result = schema.validate(messageBody);
-	if(result.error == null){
-		messageBody.created = new Date();
-		try{
-			const sql = 'INSERT INTO messages (username, subject, message, imageURL, giphyURL, options, created, user_id, gif_origin) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id';
-			const values = [messageBody.username, messageBody.subject, messageBody.message, messageBody.imageURL,messageBody.giphyURL,messageBody.options,messageBody.created,messageBody.user_id, messageBody.gif_origin];
-      const client = await db.connect();
-			try {
-				const query_res = await client.query(sql,values);
-        client.release();
-				const returnJSON = {
-					username:values[0],
-					subject:values[1],
-					message:values[2],
-					imageurl:values[3],
-					giphyURL:values[4],
-					options:values[5],
-					created:values[6],
-          id:query_res.rows[0].id,
-          user_id:values[7],
-          gif_origin:values[8]
-				};
-				return JSON.stringify(returnJSON);
-			} catch (err) {
-        if (err.code == "23505") {
-         return {
-           error: true,
-           origin: 'psql',
-           code: '23505'
-         };
+  const ip_array = [x_real_ip, connection_remote_address, x_forwarded_for];
+  if (!messageBody.recaptcha_token) {
+    logIp(ip_array, 'empty');
+    return {error: true, origin: 'recaptcha', code: 'empty'}
+  } 
+  const captchaResponse = await testCaptcha(messageBody.recaptcha_token);
+  if (captchaResponse.success) {
+    if(process.env.CORS_ORIGIN_URL.includes(captchaResponse.hostname)) {
+      logIp(ip_array, captchaResponse.score);
+      if (!messageBody.username) messageBody.username = 'anônimo';
+      if (!messageBody.imageURL) messageBody.imageURL = '';
+      const result = schema.validate(messageBody);
+      if(result.error == null){
+        messageBody.created = new Date();
+        try{
+          const sql = 'INSERT INTO messages (username, subject, message, imageURL, giphyURL, options, created, user_id, gif_origin) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id';
+          const values = [messageBody.username, messageBody.subject, messageBody.message, messageBody.imageURL,messageBody.giphyURL,messageBody.options,messageBody.created,messageBody.user_id, messageBody.gif_origin];
+          const client = await db.connect();
+          try {
+            const query_res = await client.query(sql,values);
+            client.release();
+            const returnJSON = {
+              username:values[0],
+              subject:values[1],
+              message:values[2],
+              imageurl:values[3],
+              giphyURL:values[4],
+              options:values[5],
+              created:values[6],
+              id:query_res.rows[0].id,
+              user_id:values[7],
+              gif_origin:values[8]
+            };
+            return JSON.stringify(returnJSON);
+          } catch (err) {
+            if (err.code == "23505") {
+             return {
+               error: true,
+               origin: 'psql',
+               code: '23505'
+             };
+            }
+          }
+        } catch (err){
+          console.error(err);
+          return (err);
         }
-			}
-		} catch (err){
-			console.error(err);
-			return (err);
-		}
-	} else {
-    return result.error; 
-	}
+      } else {
+        return result.error; 
+      }
+    } else {
+      await logIp(ip, 'hostname');
+      return {
+        error: true,
+        origin: 'recaptcha',
+        code: 'hostname',
+      }
+    }
+  } else {
+    await logIp(ip_array,'failure');
+    return {
+      error: true,
+      origin: 'recaptcha',
+      code: 'failure',
+    }
+  }
 }
 
 module.exports.deleteMessage = async function(){
