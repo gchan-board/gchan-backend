@@ -1,6 +1,9 @@
 const Joi = require('joi');
 const { query } = require('./connection');
 const db = require('./connection'); //relative path to file that exports
+// libs para verificar o captcha
+const fetch = require('node-fetch');
+const FormData = require('form-data');
 
 const schema = Joi.object().keys({
 	username: Joi.string().max(30).required(),
@@ -171,8 +174,30 @@ async function postMessageFromSlack(post){
   }
 }
 
+async function testCaptcha(token, ip) {
+  var formdata = new FormData();
+  formdata.append("secret", process.env.RECAPTCHA3_KEY);
+  formdata.append("response", token);
+  console.log('request from ip: ', ip);
+  var requestOptions = {
+    method: 'POST',
+    body: formdata,
+  };
+  return fetch("https://www.google.com/recaptcha/api/siteverify", requestOptions)
+  .then(response => response.json())
+  .catch(error => error);
+}
+
 async function postMessage(message){
   const messageBody = message.body;
+  const messageHeaders = message.headers;
+  const messageConnection = message.connection;
+  const x_real_ip = messageHeaders['x-real-ip'];
+  const connection_remote_address = messageConnection.remoteAddress;
+  const x_forwarded_for = messageHeaders['x-forwarded-for'];
+  console.log('IPs received: ', [x_real_ip, connection_remote_address, x_forwarded_for])
+  // const captchaResponse = await testCaptcha(messageBody.recaptcha_token, [x_real_ip, connection_remote_address, x_forwarded_for]);
+  // console.log(captchaResponse);
 	if (!messageBody.username) messageBody.username = 'anônimo';
 	if (!messageBody.imageURL) messageBody.imageURL = '';
 	const result = schema.validate(messageBody);
