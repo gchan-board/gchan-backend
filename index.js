@@ -43,7 +43,52 @@ const placeholders = require('./db/placeholders');
 const imgur = require('./db/imgur');
 const db =  require('./db/connection');
 const app = express();
-
+// sonic
+const { Ingest, Search } = require('sonic-channel');
+const sonicChannelIngest = new Ingest({
+    host: '::1',
+    port: 1491,
+    auth: 'SecretPassword',
+});
+sonicChannelIngest.connect({
+    connected: () => {
+        console.log('Sonic Ingest conectou');
+    },
+    disconnected : (e) => {
+        console.error('Sonic Ingest desconectou', e);
+    },
+    timeout : (e) => {
+        console.error('Sonic Ingest timeout', e);
+    },
+    retrying : (e) => {
+        console.info('Sonic Ingest retrying', e);
+    },
+    error: (e) => {
+        console.error(e);
+    }
+});
+const sonicChannelSearch = new Search({
+    host: '::1',
+    port: 1491,
+    auth: 'SecretPassword',
+});
+sonicChannelSearch.connect({
+    connected: () => {
+        console.log('Sonic Search conectou');
+    },
+    disconnected : (e) => {
+        console.error('Sonic Search desconectou', e);
+    },
+    timeout : (e) => {
+        console.error('Sonic Search timeout', e);
+    },
+    retrying : (e) => {
+        console.info('Sonic Search retrying', e);
+    },
+    error: (e) => {
+        console.error(e);
+    }
+});
 
 app.use(unless(['/videoupload','/gifupload','/imgupload'], fileUpload()));
 
@@ -233,6 +278,38 @@ app.post('/videoupload', upload.single('video'), async (req, res) => {
   imgur.postVideo(req.file.path, req.file.originalname).then(resp => {
     res.json(resp);
   })
+})
+// rotas para uso do sonic
+app.post('/sonic-posts', async (req, res) => {
+    const { subject, message, id } = req.body;
+    // Cadastrar posts no banco
+    await sonicChannelIngest.push('posts', 'default', `post:${id}`, `${subject} ${message}`, {
+        lang: 'por'
+    })
+    res.status(201).send();
+})
+app.get('/sonic-search', async (req, res) => {
+    const { q } = req.query;
+
+    const results = await sonicChannelSearch.query(
+        'posts',
+        'default',
+        q,
+        { lang : 'por'}
+    );
+    return res.json(results);
+});
+app.get('/sonic-suggest', async (req, res) => {
+    const { q } = req.query;
+
+    const results = await sonicChannelSearch.suggest(
+        'posts',
+        'default',
+        q,
+        { limit: 5 }
+    );
+
+    return res.json(results);
 })
 
 app.delete('/logout', (req, res) => {
