@@ -280,16 +280,56 @@ app.post('/videoupload', upload.single('video'), async (req, res) => {
   })
 })
 // rotas para uso do sonic
-app.post('/sonic-posts', async (req, res) => {
+// registro de posts
+app.post('/sonic-register-posts', async (req, res) => {
     const { subject, message, id } = req.body;
     // Cadastrar posts no banco
     await sonicChannelIngest.push('posts', 'default', `post:${id}`, `${subject} ${message}`, {
         lang: 'por'
     })
     res.status(201).send();
-})
-app.get('/sonic-search', async (req, res) => {
+});
+// registro de replies
+app.post('/sonic-register-replies', async (req, res) => {
+    const { post_id, id, message } = req.body;
+    // Cadastrar posts no banco
+    await sonicChannelIngest.push('replies', 'default', `reply:${id}`, `${post_id} ${message}`, {
+        lang: 'por'
+    })
+    res.status(201).send();
+});
+
+
+//registra todos posts
+app.get('/sonic-register-all-posts', async (req, res) => {
+    const list = [];
+    const allMsgs = await messages.getAll();
+    for (let i = 0; i < allMsgs.results.length; i++) {
+        var msg = allMsgs.results[i];
+       await sonicChannelIngest.push('posts', 'default',`post:${msg.id}`, `${msg.subject} ${msg.message}`, {
+           lang: 'por'
+       });
+       list.push(msg.id);
+    }
+    res.json(list);
+});
+// registra todas as respostas
+app.get('/sonic-register-all-replies', async (req, res) => {
+    const list = [];
+    const allMsgs = await messages.getAll();
+    for (let i = 0; i < allMsgs.results.length; i++) {
+        var msg = allMsgs.results[i];
+       await sonicChannelIngest.push('posts', 'default',`post:${msg.id}`, `${msg.subject} ${msg.message}`, {
+           lang: 'por'
+       });
+       list.push(msg.id);
+    }
+    res.json(list);
+});
+
+app.get('/search', async (req, res) => {
     const { q } = req.query;
+    if (!q) return;
 
     const results = await sonicChannelSearch.query(
         'posts',
@@ -310,7 +350,7 @@ app.get('/sonic-suggest', async (req, res) => {
     );
 
     return res.json(results);
-})
+});
 
 app.delete('/logout', (req, res) => {
   req.logOut();
