@@ -327,7 +327,7 @@ app.get('/sonic-register-all-replies', async (req, res) => {
     res.json(list);
 });
 
-app.get('/search', async (req, res) => {
+app.get('/search-posts', async (req, res) => {
     const { q } = req.query;
     if (!q) return;
 
@@ -336,6 +336,18 @@ app.get('/search', async (req, res) => {
         'default',
         q,
         { lang : 'por'}
+    );
+    return res.json(results);
+});
+app.get('/search-replies', async (req, res) => {
+    const { q } = req.query;
+    if (!q) return;
+
+    const results = await sonicChannelSearch.query(
+        'replies',
+        'default',
+        q,
+        { lang: 'por' }
     );
     return res.json(results);
 });
