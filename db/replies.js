@@ -91,7 +91,59 @@ async function getReplyFromMessageId(message_id) {
     return (err);
   }
 }
+async function getAll() {
+  try {
+    const client = await db.connect();
+    const result = await client.query('SELECT * FROM replies ORDER BY id DESC');
+    const results = { 'results': (result) ? result.rows : null};
+    client.release();
+    return results;
+  } catch (err) {
+    console.error(err);
+    return {
+      error: true,
+      origin: 'psql',
+      code: 'no results'
+    }
+  }
+}
 
+async function getOne(id) {
+  try {
+    const client = await db.connect();
+    const sql = 'SELECT * FROM replies WHERE id = $1';
+    const values = [id];
+    try {
+      const query_res = await client.query(sql, values);
+      client.release();
+      if(query_res.rows.length > 0) {
+        const results = {'results': (query_res) ? query_res.rows : null };
+        return results;
+      } else {
+        return {
+          error: true,
+          origin: 'psql',
+          code: 'no results'
+        };
+      }
+    } catch (err) {
+      return {
+        error: true,
+        origin: 'psql',
+        code: err.code
+      }
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+module.exports.getOne = async function() {
+  return getOne();
+}
+module.exports.getAll = async function() {
+  return getAll();
+}
 module.exports.postReply = async function(){
   return postReply();
 }
@@ -99,6 +151,8 @@ module.exports.getReplyFromMessageId = async function(){
   return getReplyFromMessageId();
 }
 module.exports = {
+  getOne,
+  getAll,
   postReply,
   getReplyFromMessageId,
 };

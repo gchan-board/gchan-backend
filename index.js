@@ -166,6 +166,10 @@ app.get('/replies/:id', async (req, res) => {
   replies.getReplyFromMessageId(req.params.id).then(replies => res.json(replies));
 })
 
+app.get('/reply/:id', async (req, res) => {
+  replies.getOne(req.params.id).then(reply => res.json(reply));
+});
+
 app.get('/marquee', async (req, res) => {
   marquees.getAll().then((allMarquees) => {
     res.json(allMarquees);
@@ -291,9 +295,9 @@ app.post('/sonic-register-posts', async (req, res) => {
 });
 // registro de replies
 app.post('/sonic-register-replies', async (req, res) => {
-    const { post_id, id, message } = req.body;
+    const { post_id, id, content } = req.body;
     // Cadastrar posts no banco
-    await sonicChannelIngest.push('replies', 'default', `reply:${id}`, `${post_id} ${message}`, {
+    await sonicChannelIngest.push('replies', 'default', `reply:${id}`, `${post_id} ${content}`, {
         lang: 'por'
     })
     res.status(201).send();
@@ -306,7 +310,7 @@ app.get('/sonic-register-all-posts', async (req, res) => {
     const allMsgs = await messages.getAll();
     for (let i = 0; i < allMsgs.results.length; i++) {
         var msg = allMsgs.results[i];
-       await sonicChannelIngest.push('posts', 'default',`post:${msg.id}`, `${msg.subject} ${msg.message}`, {
+       await sonicChannelIngest.push('posts', 'default',`post:${msg.id}`, `${msg.username} ${msg.subject} ${msg.message}`, {
            lang: 'por'
        });
        list.push(msg.id);
@@ -315,16 +319,16 @@ app.get('/sonic-register-all-posts', async (req, res) => {
 });
 // registra todas as respostas
 app.get('/sonic-register-all-replies', async (req, res) => {
-    const list = [];
-    const allMsgs = await messages.getAll();
-    for (let i = 0; i < allMsgs.results.length; i++) {
-        var msg = allMsgs.results[i];
-       await sonicChannelIngest.push('posts', 'default',`post:${msg.id}`, `${msg.subject} ${msg.message}`, {
-           lang: 'por'
-       });
-       list.push(msg.id);
-    }
-    res.json(list);
+  const list = [];
+  const allReplies = await replies.getAll();
+  for (let i = 0; i < allReplies.results.length; i++) {
+    var reply = allReplies.results[i];
+    await sonicChannelIngest.push('replies', 'default',`post:${reply.message_id}:reply:${reply.id}`, `${reply.username} ${reply.subject} ${reply.content}`, {
+      lang: 'por'
+    });
+    list.push(reply.id);
+  }
+  res.json(list);
 });
 
 app.get('/search-posts', async (req, res) => {
