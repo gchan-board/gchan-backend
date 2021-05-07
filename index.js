@@ -43,7 +43,7 @@ const placeholders = require('./db/placeholders');
 const imgur = require('./db/imgur');
 const db =  require('./db/connection');
 const app = express();
-// sonic
+// sonic -- início --
 const { Ingest, Search } = require('sonic-channel');
 const sonicChannelIngest = new Ingest({
     host: '::1',
@@ -64,15 +64,16 @@ sonicChannelIngest.connect({
         console.info('Sonic Ingest retrying', e);
     },
     error: (e) => {
+        return;
         console.error(e);
     }
 });
 const sonicChannelSearch = new Search({
     host: '::1',
     port: 1491,
-    auth: 'SecretPassword',
+    auth: process.env.SONIC_PW,
 });
-sonicChannelSearch.connect({
+const conect_tst = sonicChannelSearch.connect({
     connected: () => {
         console.log('Sonic Search conectou');
     },
@@ -86,9 +87,25 @@ sonicChannelSearch.connect({
         console.info('Sonic Search retrying', e);
     },
     error: (e) => {
-        console.error(e);
+        return;
+        console.error('biru ru',e);
     }
 });
+
+function sonic_register_post(id, username, subject, message) {
+  sonicChannelIngest.push('posts', 'default',`post:${id}`, `${username} ${subject} ${message}`, {
+    lang: 'por'
+  }).then(() => console.log(`post #${id} indexado na busca.`))
+  .catch((e) => console.error(`erro ao indexar post #${id}`, e));
+}
+function sonic_register_reply(message_id, id, username, content){
+  sonicChannelIngest.push('replies', 'default',`post:${message_id}:reply:${id}`, `${username} ${content}`, {
+    lang: 'por'
+  }).then(() => console.log(`reply #${id} indexada na busca.`))
+  .catch((e) => console.error(`erro ao indexar reply #${id}`, e));
+}
+
+// sonic -- fim --
 
 app.use(unless(['/videoupload','/gifupload','/imgupload'], fileUpload()));
 
@@ -232,16 +249,25 @@ app.post('/register', async function(req, res, next) {
 })
 
 app.post('/messages', async (req,res) => {
-
 	messages.postMessage(req).then((message) => {
+    if(!message.error && !message.details){
+      const parsedMessage = JSON.parse(message);
+      if (!parsedMessage.error && !parsedMessage.details){
+        sonic_register_post(parsedMessage.id, parsedMessage.username, parsedMessage.subject, parsedMessage.message);
+      }
+    }
 		res.json(message);
 	});
-	
 });
 
 app.post('/replies', async (req, res) => {
 
   replies.postReply(req).then((reply) => {
+    console.log(reply);
+    if (!reply.error && !reply.details) {
+      const parsedReply = JSON.parse(reply);
+      sonic_register_reply(parsedReply.message_id, parsedReply.id, parsedReply.username, parsedReply.content);
+    }
     res.json(reply);
   })
 
@@ -303,7 +329,6 @@ app.post('/sonic-register-replies', async (req, res) => {
     res.status(201).send();
 });
 
-
 //registra todos posts
 app.get('/sonic-register-all-posts', async (req, res) => {
     const list = [];
@@ -332,41 +357,54 @@ app.get('/sonic-register-all-replies', async (req, res) => {
 });
 
 app.get('/search-posts', async (req, res) => {
-    const { q } = req.query;
-    if (!q) return;
-
+  const { q } = req.query;
+  if (!q) return;
+  try {
+    const ping = await sonicChannelSearch.ping();
     const results = await sonicChannelSearch.query(
-        'posts',
-        'default',
-        q,
-        { lang : 'por'}
+      'posts',
+      'default',
+      q,
+      { lang : 'por'}
     );
-    return res.json(results);
+    res.json(results);
+  } catch(e) {
+    // cai neste catch se o servidor de busca estiver fora
+    res.status(503).json({message: "Servidor de busca em manutenção."});
+  }
 });
 app.get('/search-replies', async (req, res) => {
     const { q } = req.query;
     if (!q) return;
-
-    const results = await sonicChannelSearch.query(
+    try {
+      const ping = await sonicChannelSearch.ping();
+      const results = await sonicChannelSearch.query(
         'replies',
         'default',
         q,
-        { lang: 'por' }
-    );
-    return res.json(results);
+        { lang : 'por'}
+      );
+      res.json(results);
+    } catch(e) {
+      // cai neste catch se o servidor de busca estiver fora
+      res.status(503).json({message: "Servidor de busca em manutenção."});
+    }
 });
-app.get('/sonic-suggest', async (req, res) => {
-    const { q } = req.query;
 
-    const results = await sonicChannelSearch.suggest(
-        'posts',
-        'default',
-        q,
-        { limit: 5 }
-    );
-
-    return res.json(results);
-});
+// -- rota sonic suggest fora de uso --
+// app.get('/sonic-suggest', async (req, res) => {
+//     const { q } = req.query;
+// 
+//     const results = await sonicChannelSearch.suggest(
+//         'posts',
+//         'default',
+//         q,
+//         { limit: 5 }
+//     );
+// 
+//     return res.json(results);
+// });
+// -- rota sonic suggest fora de uso --
 
 app.delete('/logout', (req, res) => {
   req.logOut();
