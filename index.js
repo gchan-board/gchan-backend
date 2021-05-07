@@ -46,9 +46,9 @@ const app = express();
 // sonic -- início --
 const { Ingest, Search } = require('sonic-channel');
 const sonicChannelIngest = new Ingest({
-    host: '::1',
+    host: process.env.SONIC_HOST,
     port: 1491,
-    auth: 'SecretPassword',
+    auth: process.env.SONIC_PW,
 });
 sonicChannelIngest.connect({
     connected: () => {
@@ -69,7 +69,7 @@ sonicChannelIngest.connect({
     }
 });
 const sonicChannelSearch = new Search({
-    host: '::1',
+    host: process.env.SONIC_HOST,
     port: 1491,
     auth: process.env.SONIC_PW,
 });
