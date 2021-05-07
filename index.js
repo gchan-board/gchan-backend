@@ -179,6 +179,12 @@ app.get('/message/:id', async (req, res) => {
   messages.getOne(req.params.id).then((message) => res.json(message));
 })
 
+app.get('/replies', async (req, res) => {
+  replies.getAll().then((allReplies) => {
+    res.json(allReplies);
+  })
+})
+
 app.get('/replies/:id', async (req, res) => {
   replies.getReplyFromMessageId(req.params.id).then(replies => res.json(replies));
 })
@@ -330,31 +336,31 @@ app.post('/sonic-register-replies', async (req, res) => {
 });
 
 //registra todos posts
-app.get('/sonic-register-all-posts', async (req, res) => {
-    const list = [];
-    const allMsgs = await messages.getAll();
-    for (let i = 0; i < allMsgs.results.length; i++) {
-        var msg = allMsgs.results[i];
-       await sonicChannelIngest.push('posts', 'default',`post:${msg.id}`, `${msg.username} ${msg.subject} ${msg.message}`, {
-           lang: 'por'
-       });
-       list.push(msg.id);
-    }
-    res.json(list);
-});
+// app.get('/sonic-register-all-posts', async (req, res) => {
+//     const list = [];
+//     const allMsgs = await messages.getAll();
+//     for (let i = 0; i < allMsgs.results.length; i++) {
+//         var msg = allMsgs.results[i];
+//        await sonicChannelIngest.push('posts', 'default',`post:${msg.id}`, `${msg.username} ${msg.subject} ${msg.message}`, {
+//            lang: 'por'
+//        });
+//        list.push(msg.id);
+//     }
+//     res.json(list);
+// });
 // registra todas as respostas
-app.get('/sonic-register-all-replies', async (req, res) => {
-  const list = [];
-  const allReplies = await replies.getAll();
-  for (let i = 0; i < allReplies.results.length; i++) {
-    var reply = allReplies.results[i];
-    await sonicChannelIngest.push('replies', 'default',`post:${reply.message_id}:reply:${reply.id}`, `${reply.username} ${reply.subject} ${reply.content}`, {
-      lang: 'por'
-    });
-    list.push(reply.id);
-  }
-  res.json(list);
-});
+// app.get('/sonic-register-all-replies', async (req, res) => {
+//   const list = [];
+//   const allReplies = await replies.getAll();
+//   for (let i = 0; i < allReplies.results.length; i++) {
+//     var reply = allReplies.results[i];
+//     await sonicChannelIngest.push('replies', 'default',`post:${reply.message_id}:reply:${reply.id}`, `${reply.username} ${reply.subject} ${reply.content}`, {
+//       lang: 'por'
+//     });
+//     list.push(reply.id);
+//   }
+//   res.json(list);
+// });
 
 app.get('/search-posts', async (req, res) => {
   const { q } = req.query;
