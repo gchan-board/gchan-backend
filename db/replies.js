@@ -138,6 +138,37 @@ async function getOne(id) {
   }
 }
 
+async function getManyById(ids) {
+
+  try {
+    const client = await db.connect();
+    const sql = 'SELECT * FROM replies WHERE id = ANY ($1)';
+    const values = [ids];
+    try {
+      const query_res = await client.query(sql, values);
+      client.release();
+      if(query_res.rows.length > 0) {
+        const results = {'results': (query_res) ? query_res.rows : null };
+        return results;
+      } else {
+        return {
+          error: true,
+          origin: 'psql',
+          code: 'no results'
+        };
+      }
+    } catch (err) {
+      return {
+        error: true,
+        origin: 'psql',
+        code: err.code
+      }
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
+
 module.exports.getOne = async function() {
   return getOne();
 }
@@ -152,6 +183,7 @@ module.exports.getReplyFromMessageId = async function(){
 }
 module.exports = {
   getOne,
+  getManyById,
   getAll,
   postReply,
   getReplyFromMessageId,

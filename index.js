@@ -176,6 +176,10 @@ app.get('/messages/:offset', async (req, res) => {
 })
 
 app.get('/message/:id', async (req, res) => {
+  const ids = req.params.id.split(',');
+  if (ids.length > 1) {
+    messages.getManyById(ids).then((messages) => res.json(messages));
+  }
   messages.getOne(req.params.id).then((message) => res.json(message));
 })
 
@@ -373,7 +377,12 @@ app.get('/search-posts', async (req, res) => {
       q,
       { lang : 'por'}
     );
-    res.json(results);
+    // ao invés de retornar os ids pro cliente, e então
+    // fazer a requisição para o banco,
+    // vou consultar o banco pelo servidor e
+    // já enviar os resultados
+    const posts_ids = results.map((p) => p.split(':')[1]);
+    messages.getManyById(posts_ids).then((messages) => res.json(messages));
   } catch(e) {
     // cai neste catch se o servidor de busca estiver fora
     res.status(503).json({message: "Servidor de busca em manutenção."});
@@ -390,7 +399,8 @@ app.get('/search-replies', async (req, res) => {
         q,
         { lang : 'por'}
       );
-      res.json(results);
+      const reply_ids = results.map((r) => r.split(':')[3]);
+      replies.getManyById(reply_ids).then((replies) => res.json(replies));
     } catch(e) {
       // cai neste catch se o servidor de busca estiver fora
       res.status(503).json({message: "Servidor de busca em manutenção."});

@@ -114,6 +114,37 @@ async function getOne(id) {
   }
 }
 
+async function getManyById(ids) {
+
+  try {
+    const client = await db.connect();
+    const sql = 'SELECT * FROM messages WHERE id = ANY ($1)';
+    const values = [ids];
+    try {
+      const query_res = await client.query(sql, values);
+      client.release();
+      if(query_res.rows.length > 0) {
+        const results = {'results': (query_res) ? query_res.rows : null };
+        return results;
+      } else {
+        return {
+          error: true,
+          origin: 'psql',
+          code: 'no results'
+        };
+      }
+    } catch (err) {
+      return {
+        error: true,
+        origin: 'psql',
+        code: err.code
+      }
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
+
 async function deleteMessage(messageID){
   try {
     const sql = 'DELETE FROM messages WHERE id = $1 RETURNING id';
@@ -308,6 +339,7 @@ module.exports = {
   getAll,
   getAllOffset,
   getOne,
+  getManyById,
   deleteMessage,
 	schema
 };
