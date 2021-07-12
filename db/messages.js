@@ -184,15 +184,14 @@ async function postMessageFromSlack(post){
     message.message = payload[0];
     message.imageURL = payload[1].trim();
     message.giphyURL = '';
-    message.created = new Date();
     try{
-      const sql = 'INSERT INTO messages (username, subject, message, imageURL, giphyURL, created, user_id) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id';
-      const values = [message.username, message.subject, message.message, message.imageURL, message.giphyURL, message.created, message.user_id];
+      const sql = 'INSERT INTO messages (username, subject, message, imageURL, giphyURL, user_id) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id';
+      const values = [message.username, message.subject, message.message, message.imageURL, message.giphyURL, message.user_id];
       const client = await db.connect();
       try {
         const query_res = await client.query(sql, values);
         client.release();
-        return JSON.stringify({'url': process.env.CORS_ORIGIN_URL + '/g', 'mensagem': 'obrigado por usar o gchan (⌐■_■)'});
+        return JSON.stringify({'url': 'https://gchan.com.br' + '/g', 'mensagem': 'obrigado por usar o gchan (⌐■_■)'});
       } catch(err){
         client.release();
       }
@@ -205,15 +204,15 @@ async function postMessageFromSlack(post){
   }
 }
 
-
-async function logIp(ip_array, score) {
+async function logIp(table_pk, table_name, action, ip_array, score) {
   try {
-    const sql = 'INSERT INTO ip_logs (x_real_ip, remoteAddress, x_forwarded_for, score) VALUES ($1, $2, $3, $4)';
-    ip_array.push(score)
-    const values = ip_array;
+    const sql = 'INSERT INTO post_logs (table_pk, table_name, action, x_real_ip, remoteAddress, x_forwarded_for, score) VALUES ($1, $2, $3, $4, $5, $6, $7)';
+    let sql_data = [table_pk, table_name, action];
+    sql_data = sql_data.concat(ip_array);
+    sql_data.push(score);
     const client = await db.connect();
     try {
-      const query_res = client.query(sql, values);
+      const query_res = client.query(sql, sql_data);
       client.release();
     } catch (err) {
       console.log('erro logId client.query, ', err);
@@ -245,37 +244,51 @@ async function postMessage(message){
   const x_forwarded_for = messageHeaders['x-forwarded-for'];
   const ip_array = [x_real_ip, connection_remote_address, x_forwarded_for];
   if (!messageBody.recaptcha_token) {
-    logIp(ip_array, 'empty');
+    // logIp(ip_array, 'empty'); // não vou logar tentativas com recaptcha falho
     return {error: true, origin: 'recaptcha', code: 'empty'}
   } 
   const captchaResponse = await testCaptcha(messageBody.recaptcha_token);
   if (captchaResponse.success) {
     if(process.env.CORS_ORIGIN_URL.includes(captchaResponse.hostname)) {
-      logIp(ip_array, captchaResponse.score);
       if (!messageBody.username) messageBody.username = 'anônimo';
       if (!messageBody.imageURL) messageBody.imageURL = '';
       const result = schema.validate(messageBody);
       if(result.error == null){
-        messageBody.created = new Date();
         try{
-          const sql = 'INSERT INTO messages (username, subject, message, imageURL, giphyURL, options, created, user_id, gif_origin) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id';
-          const values = [messageBody.username, messageBody.subject, messageBody.message, messageBody.imageURL,messageBody.giphyURL,messageBody.options,messageBody.created,messageBody.user_id, messageBody.gif_origin];
+          const sql = 'INSERT INTO messages (username, subject, message, imageURL, giphyURL, options, user_id, gif_origin) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id';
+          const values = [
+            messageBody.username,
+            messageBody.subject,
+            messageBody.message,
+            messageBody.imageURL,
+            messageBody.giphyURL,
+            messageBody.options,
+            messageBody.user_id,
+            messageBody.gif_origin
+          ];
           const client = await db.connect();
           try {
             const query_res = await client.query(sql,values);
             client.release();
+            const post_id = query_res.rows[0].id;
+            const date_ob = new Date();
+            const day = ("0" + date_ob.getDate()).slice(-2);
+            const month = ("0" + (date_ob.getMonth() + 1)).slice(-2);
+            const currentDateTime = `${date_ob.getHours()}:${date_ob.getMinutes()} ${day}/${month}/${date_ob.getFullYear()}`; 
+            console.log(currentDateTime);
             const returnJSON = {
-              username:values[0],
-              subject:values[1],
-              message:values[2],
-              imageurl:values[3],
-              giphyURL:values[4],
-              options:values[5],
-              created:values[6],
-              id:query_res.rows[0].id,
-              user_id:values[7],
-              gif_origin:values[8]
+              username: values[0],
+              subject: values[1],
+              message: values[2],
+              imageurl: values[3],
+              giphyURL: values[4],
+              options: values[5],
+              created: currentDateTime,
+              id: post_id,
+              user_id: values[7],
+              gif_origin: values[8]
             };
+            logIp(post_id, 'messages', 'insert', ip_array, captchaResponse.score);
             return JSON.stringify(returnJSON);
           } catch (err) {
             if (err.code == "23505") {
@@ -294,7 +307,7 @@ async function postMessage(message){
         return result.error; 
       }
     } else {
-      await logIp(ip, 'hostname');
+      // await logIp(ip, 'hostname'); // não vou logar tentativas com recaptcha falho
       return {
         error: true,
         origin: 'recaptcha',
@@ -302,7 +315,7 @@ async function postMessage(message){
       }
     }
   } else {
-    await logIp(ip_array,'failure');
+    // await logIp(ip_array,'failure'); // não vou logar tentativas com recaptcha falho
     return {
       error: true,
       origin: 'recaptcha',
