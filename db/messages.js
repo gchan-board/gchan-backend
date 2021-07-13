@@ -191,7 +191,7 @@ async function postMessageFromSlack(post){
       try {
         const query_res = await client.query(sql, values);
         client.release();
-        return JSON.stringify({'url': 'https://gchan.com.br' + '/g', 'mensagem': 'obrigado por usar o gchan (⌐■_■)'});
+        return JSON.stringify({'url': 'https://gchan.com.br', 'mensagem': 'obrigado por usar o gchan (⌐■_■)'});
       } catch(err){
         client.release();
       }
@@ -275,7 +275,6 @@ async function postMessage(message){
             const day = ("0" + date_ob.getDate()).slice(-2);
             const month = ("0" + (date_ob.getMonth() + 1)).slice(-2);
             const currentDateTime = `${date_ob.getHours()}:${date_ob.getMinutes()} ${day}/${month}/${date_ob.getFullYear()}`; 
-            console.log(currentDateTime);
             const returnJSON = {
               username: values[0],
               subject: values[1],
@@ -285,8 +284,8 @@ async function postMessage(message){
               options: values[5],
               created: currentDateTime,
               id: post_id,
-              user_id: values[7],
-              gif_origin: values[8]
+              user_id: values[6],
+              gif_origin: values[7]
             };
             logIp(post_id, 'messages', 'insert', ip_array, captchaResponse.score);
             return JSON.stringify(returnJSON);
