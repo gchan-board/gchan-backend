@@ -1,6 +1,9 @@
 const Joi = require('joi');
 const { query } = require('./connection');
 const db = require('./connection'); //relative path to file that exports
+// libs para verificar o captcha
+const fetch = require('node-fetch');
+const FormData = require('form-data');
 
 const replySchema = Joi.object().keys({
   message_id: Joi.string().alphanum().required(),
@@ -12,59 +15,124 @@ const replySchema = Joi.object().keys({
 		]
 	}).allow(''),
   user_id: Joi.number(),
+  recaptcha_token: Joi.string().allow('')
 });
+
+async function logIp(table_pk, table_name, action, ip_array, score) {
+  try {
+    const sql = 'INSERT INTO post_logs (table_pk, table_name, action, x_real_ip, remoteAddress, x_forwarded_for, score) VALUES ($1, $2, $3, $4, $5, $6, $7)';
+    let sql_data = [table_pk, table_name, action];
+    sql_data = sql_data.concat(ip_array);
+    sql_data.push(score);
+    const client = await db.connect();
+    try {
+      const query_res = client.query(sql, sql_data);
+      client.release();
+    } catch (err) {
+      console.log('erro logId client.query, ', err);
+    }
+  } catch (err) {
+    console.log('erro logId db.connect, ', err);
+  }
+}
+
+async function testCaptcha(token) {
+  var formdata = new FormData();
+  formdata.append("secret", process.env.RECAPTCHA3_KEY);
+  formdata.append("response", token);
+  var requestOptions = {
+    method: 'POST',
+    body: formdata,
+  };
+  return fetch("https://www.google.com/recaptcha/api/siteverify", requestOptions)
+  .then(response => response.json())
+  .catch(error => error);
+}
 
 async function postReply(reply) {
   const replyBody = reply.body;
-	if (!replyBody.username) replyBody.username = 'Anonymous';
-	if (!replyBody.imageURL) replyBody.imageURL = '';
-	const result = replySchema.validate(replyBody);
-	if(result.error == null){
-		replyBody.created = new Date();
-		try{
-			const sql = 'INSERT INTO replies (username, content, imageURL, created, user_id, message_id) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id';
-			const values = [replyBody.username, replyBody.content, replyBody.imageURL, replyBody.created, replyBody.user_id, replyBody.message_id];
-      const client = await db.connect();
-			try {
-				const query_res = await client.query(sql,values);
-				const returnJSON = {
-          message_id:values[5],
-					username:values[0],
-					content:values[1],
-					imageurl:values[2],
-					created:values[3],
-          id:query_res.rows[0].id,
-          user_id:values[4],
-        };
+
+  // para registro do IP / reCAPTCHA
+  const replyHeaders = reply.headers;
+  const replyConnection = reply.connection;
+  const x_real_ip = replyHeaders['x-real-ip'];
+  const connection_remote_address = replyConnection.remoteAddress;
+  const x_forwarded_for = replyHeaders['x-forwarded-for'];
+  const ip_array = [x_real_ip, connection_remote_address, x_forwarded_for];
+  if (!replyBody.recaptcha_token) {
+    return { error: true, origin: 'recaptcha', code: 'empty' };
+  }
+  const captchaResponse = await testCaptcha(replyBody.recaptcha_token);
+  if (captchaResponse.success) {
+    if (!replyBody.username) replyBody.username = 'Anonymous';
+    if (!replyBody.imageURL) replyBody.imageURL = '';
+    const result = replySchema.validate(replyBody);
+    if(result.error == null){
+      try{
+        const sql = 'INSERT INTO replies (username, content, imageURL, user_id, message_id) VALUES ($1,$2,$3,$4,$5) RETURNING id';
+        const values = [
+          replyBody.username,
+          replyBody.content,
+          replyBody.imageURL,
+          replyBody.user_id,
+          replyBody.message_id];
+        const client = await db.connect();
         try {
-          const updated_sql = 'UPDATE messages SET updated_at = NOW() WHERE id = $1';
-          const updated_values = [replyBody.message_id];
+          const query_res = await client.query(sql,values);
+
+          const date_ob = new Date();
+          const day = ("0" + date_ob.getDate()).slice(-2);
+          const month = ("0" + (date_ob.getMonth() + 1)).slice(-2);
+          const currentDateTime = `${date_ob.getHours()}:${date_ob.getMinutes()} ${day}/${month}/${date_ob.getFullYear()}`; 
+
+          const reply_id = query_res.rows[0].id;
+
+          const returnJSON = {
+            message_id:values[4],
+            username:values[0],
+            content:values[1],
+            imageurl:values[2],
+            created:currentDateTime,
+            id:reply_id,
+            user_id:values[3],
+          };
           try {
-            const updated_query = await client.query(updated_sql, updated_values);
-            client.release();
-            return JSON.stringify(returnJSON);
+            const updated_sql = 'UPDATE messages SET updated_at = NOW() WHERE id = $1';
+            const updated_values = [replyBody.message_id];
+            try {
+              const updated_query = await client.query(updated_sql, updated_values);
+              client.release();
+              logIp(reply_id, 'replies', 'insert', ip_array, captchaResponse.score);
+              return JSON.stringify(returnJSON);
+            } catch (err) {
+              return JSON.stringify(returnJSON);
+            }
           } catch (err) {
             return JSON.stringify(returnJSON);
           }
         } catch (err) {
-          return JSON.stringify(returnJSON);
+          if (err.code == "23505") {
+           return {
+             error: true,
+             origin: 'psql',
+             code: '23505'
+           };
+          }
         }
-			} catch (err) {
-        if (err.code == "23505") {
-         return {
-           error: true,
-           origin: 'psql',
-           code: '23505'
-         };
-        }
-			}
-		} catch (err){
-			console.error(err);
-			return (err);
+      } catch (err){
+        console.error(err);
+        return (err);
+      }
+    } else {
+      return result.error; 
     }
-	} else {
-    return result.error; 
-	}
+  } else {
+    return {
+      error: true,
+      origin: 'recaptcha',
+      code: 'failure'
+    }
+  }
 }
 
 async function getReplyFromMessageId(message_id) {
@@ -167,6 +235,7 @@ async function getManyById(ids) {
   } catch (err) {
     console.error(err);
   }
+
 }
 
 module.exports.getOne = async function() {
