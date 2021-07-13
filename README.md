@@ -9,3 +9,8 @@ Adiciona horário nas postagens
 
     ALTER TABLE messages ALTER COLUMN created TYPE TIMESTAMP;
     ALTER TABLE messages ALTER COLUMN created SET DEFAULT NOW();
+
+Adiciona horário nas replies
+
+    ALTER TABLE replies ALTER COLUMN created TYPE TIMESTAMP;
+    ALTER TABLE replies ALTER COLUMN created SET DEFAULT NOW();

@@ -271,10 +271,7 @@ async function postMessage(message){
             const query_res = await client.query(sql,values);
             client.release();
             const post_id = query_res.rows[0].id;
-            const date_ob = new Date();
-            const day = ("0" + date_ob.getDate()).slice(-2);
-            const month = ("0" + (date_ob.getMonth() + 1)).slice(-2);
-            const currentDateTime = `${date_ob.getHours()}:${date_ob.getMinutes()} ${day}/${month}/${date_ob.getFullYear()}`; 
+            const currentDateTime = new Date();
             const returnJSON = {
               username: values[0],
               subject: values[1],
