@@ -59,72 +59,82 @@ async function postReply(reply) {
   const connection_remote_address = replyConnection.remoteAddress;
   const x_forwarded_for = replyHeaders['x-forwarded-for'];
   const ip_array = [x_real_ip, connection_remote_address, x_forwarded_for];
+
   if (!replyBody.recaptcha_token) {
     return { error: true, origin: 'recaptcha', code: 'empty' };
   }
   const captchaResponse = await testCaptcha(replyBody.recaptcha_token);
   if (captchaResponse.success) {
-    if (!replyBody.username) replyBody.username = 'Anonymous';
-    if (!replyBody.imageURL) replyBody.imageURL = '';
-    const result = replySchema.validate(replyBody);
-    if(result.error == null){
-      try{
-        const sql = 'INSERT INTO replies (username, content, imageURL, user_id, message_id) VALUES ($1,$2,$3,$4,$5) RETURNING id';
-        const values = [
-          replyBody.username,
-          replyBody.content,
-          replyBody.imageURL,
-          replyBody.user_id,
-          replyBody.message_id];
-        const client = await db.connect();
-        try {
-          const query_res = await client.query(sql,values);
-
-          const date_ob = new Date();
-          const day = ("0" + date_ob.getDate()).slice(-2);
-          const month = ("0" + (date_ob.getMonth() + 1)).slice(-2);
-          const currentDateTime = `${date_ob.getHours()}:${date_ob.getMinutes()} ${day}/${month}/${date_ob.getFullYear()}`; 
-
-          const reply_id = query_res.rows[0].id;
-
-          const returnJSON = {
-            message_id:values[4],
-            username:values[0],
-            content:values[1],
-            imageurl:values[2],
-            created:currentDateTime,
-            id:reply_id,
-            user_id:values[3],
-          };
+    if(process.env.CORS_ORIGIN_URL.includes(captchaResponse.hostname)) {
+      if (!replyBody.username) replyBody.username = 'Anonymous';
+      if (!replyBody.imageURL) replyBody.imageURL = '';
+      const result = replySchema.validate(replyBody);
+      if(result.error == null){
+        try{
+          const sql = 'INSERT INTO replies (username, content, imageURL, user_id, message_id) VALUES ($1,$2,$3,$4,$5) RETURNING id';
+          const values = [
+            replyBody.username,
+            replyBody.content,
+            replyBody.imageURL,
+            replyBody.user_id,
+            replyBody.message_id
+          ];
+          const client = await db.connect();
           try {
-            const updated_sql = 'UPDATE messages SET updated_at = NOW() WHERE id = $1';
-            const updated_values = [replyBody.message_id];
+            const query_res = await client.query(sql,values);
+
+            const date_ob = new Date();
+            const day = ("0" + date_ob.getDate()).slice(-2);
+            const month = ("0" + (date_ob.getMonth() + 1)).slice(-2);
+            const currentDateTime = `${date_ob.getHours()}:${date_ob.getMinutes()} ${day}/${month}/${date_ob.getFullYear()}`; 
+
+            const reply_id = query_res.rows[0].id;
+
+            const returnJSON = {
+              message_id:values[4],
+              username:values[0],
+              content:values[1],
+              imageurl:values[2],
+              created:currentDateTime,
+              id:reply_id,
+              user_id:values[3],
+            };
             try {
-              const updated_query = await client.query(updated_sql, updated_values);
-              client.release();
-              logIp(reply_id, 'replies', 'insert', ip_array, captchaResponse.score);
-              return JSON.stringify(returnJSON);
+              const updated_sql = 'UPDATE messages SET updated_at = NOW() WHERE id = $1';
+              const updated_values = [replyBody.message_id];
+              try {
+                const updated_query = await client.query(updated_sql, updated_values);
+                client.release();
+                logIp(reply_id, 'replies', 'insert', ip_array, captchaResponse.score);
+                return JSON.stringify(returnJSON);
+              } catch (err) {
+                return JSON.stringify(returnJSON);
+              }
             } catch (err) {
               return JSON.stringify(returnJSON);
             }
           } catch (err) {
-            return JSON.stringify(returnJSON);
+            if (err.code == "23505") {
+             return {
+               error: true,
+               origin: 'psql',
+               code: '23505'
+             };
+            }
           }
-        } catch (err) {
-          if (err.code == "23505") {
-           return {
-             error: true,
-             origin: 'psql',
-             code: '23505'
-           };
-          }
+        } catch (err){
+          console.error(err);
+          return (err);
         }
-      } catch (err){
-        console.error(err);
-        return (err);
+      } else {
+        return result.error; 
       }
     } else {
-      return result.error; 
+      return {
+        error: true,
+        origin: 'recaptcha',
+        code: 'hostname'
+      }
     }
   } else {
     return {
