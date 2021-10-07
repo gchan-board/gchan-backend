@@ -8,7 +8,7 @@ const FormData = require('form-data');
 const replySchema = Joi.object().keys({
   message_id: Joi.string().alphanum().required(),
 	username: Joi.string().max(30).required(),
-	content: Joi.string().max(250).required(),
+	content: Joi.string().max(1000).required(),
 	imageURL: Joi.string().uri({
 		scheme: [
 			/https?/

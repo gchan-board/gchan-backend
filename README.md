@@ -1,3 +1,47 @@
+## Sonic search no local
+
+Basicamente, seguir as instruções do [install from source](git@github.com:valeriansaliou/sonic.git). \(Precisa instalar cargo/rust\)
+
+    git clone git@github.com:valeriansaliou/sonic.git && cd sonic && cargo build --release
+
+Depois,
+
+    ./target/release/sonic -c config.cfg
+
+Reinicie o servidor e verifique que
+
+> 8:25:41 PM dev.1 |  Listening on 5000.
+
+> 8:25:41 PM dev.1 |  Sonic Ingest conectou
+
+> 8:25:41 PM dev.1 |  Sonic Search conectou
+
+
+
+
+## Configuração do postgresql no local
+
+Dependendo da configuração no local, o erro
+
+    8:03:13 PM dev.1 |  Error: getaddrinfo EAI_AGAIN guits
+    8:03:13 PM dev.1 |      at GetAddrInfoReqWrap.onlookup [as oncomplete] (node:dns:69:26) {
+    8:03:13 PM dev.1 |    errno: -3001,
+    8:03:13 PM dev.1 |    code: 'EAI_AGAIN',
+    8:03:13 PM dev.1 |    syscall: 'getaddrinfo',
+    8:03:13 PM dev.1 |    hostname: 'guits'
+    8:03:13 PM dev.1 |  }
+
+significa que a string de conexão do psql está buscando um host chamado "guits", mas está tendo erro em resolvê-lo.
+
+Isso é porque a constante DATABASE\_URL \(ver arquivo example.env\) está configurada como postgres://guits .
+
+No ubuntu, se resolve adicionando uma linha
+
+> 127.0.0.1 guits
+
+no arquivo /etc/hosts .
+
+
 ### Migrations
 
 Cria tabela pra registro de ip
