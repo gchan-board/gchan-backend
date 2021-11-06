@@ -144,7 +144,7 @@ async function postReply(reply) {
 
 async function getReplyFromMessageId(message_id) {
   try{
-    const sql = 'SELECT * FROM replies WHERE message_id = $1';
+    const sql = 'SELECT * FROM replies WHERE message_id = $1 ORDER BY id ASC';
     const values = [message_id];
     const client = await db.connect();
     try {
