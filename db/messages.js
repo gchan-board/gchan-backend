@@ -269,7 +269,6 @@ async function postMessage(message){
           const client = await db.connect();
           try {
             const query_res = await client.query(sql,values);
-            client.release();
             const post_id = query_res.rows[0].id;
             const currentDateTime = new Date();
             const returnJSON = {
@@ -294,6 +293,8 @@ async function postMessage(message){
                code: '23505'
              };
             }
+          } finally {
+            client.release();
           }
         } catch (err){
           console.error(err);
