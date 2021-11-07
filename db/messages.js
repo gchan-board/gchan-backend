@@ -46,7 +46,7 @@ const slackSchema = Joi.object().keys({
 async function getAll(){
 	try{
 		const client = await db.connect();
-		const result = await client.query('SELECT * FROM messages ORDER BY updated_at DESC, id DESC');
+		const result = await client.query('SELECT * FROM messages WHERE deleted = false ORDER BY updated_at DESC, id DESC');
 		const results = { 'results': (result) ? result.rows : null};
 		client.release();
 		return results;
@@ -58,7 +58,7 @@ async function getAll(){
 async function getAllOffset(offset) {
   try {
     const client = await db.connect();
-    const sql = 'SELECT * FROM messages ORDER BY updated_at DESC, id DESC OFFSET $1 LIMIT 15';
+    const sql = 'SELECT * FROM messages WHERE deleted = false ORDER BY updated_at DESC, id DESC OFFSET $1 LIMIT 15';
     const value = [offset];
     try {
       const query_res = await client.query(sql, value);
@@ -87,7 +87,7 @@ async function getAllOffset(offset) {
 async function getOne(id) {
   try {
     const client = await db.connect();
-    const sql = 'SELECT * FROM messages WHERE id = $1';
+    const sql = 'SELECT * FROM messages WHERE id = $1 AND deleted = false';
     const values = [id];
     try {
       const query_res = await client.query(sql, values);
@@ -118,7 +118,7 @@ async function getManyById(ids) {
 
   try {
     const client = await db.connect();
-    const sql = 'SELECT * FROM messages WHERE id = ANY ($1)';
+    const sql = 'SELECT * FROM messages WHERE id = ANY ($1) AND deleted = false';
     const values = [ids];
     try {
       const query_res = await client.query(sql, values);

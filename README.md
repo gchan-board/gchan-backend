@@ -16,9 +16,6 @@ Reinicie o servidor e verifique que
 
 > 8:25:41 PM dev.1 |  Sonic Search conectou
 
-
-
-
 ## Configuração do postgresql no local
 
 Dependendo da configuração no local, o erro
@@ -41,7 +38,6 @@ No ubuntu, se resolve adicionando uma linha
 
 no arquivo /etc/hosts .
 
-
 ### Migrations
 
 Cria tabela pra registro de ip
@@ -58,3 +54,7 @@ Adiciona horário nas replies
 
     ALTER TABLE replies ALTER COLUMN created TYPE TIMESTAMP;
     ALTER TABLE replies ALTER COLUMN created SET DEFAULT NOW();
+
+Adiciona flag DELETED nas messages
+
+    ALTER TABLE messages ADD COLUMN deleted boolean DEFAULT false;
