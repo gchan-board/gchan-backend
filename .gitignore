@@ -5,3 +5,4 @@ heroku.log
 fix_db.sql
 postgressing.txt
 latest.dump*
+.nvmrc

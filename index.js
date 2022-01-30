@@ -1,7 +1,7 @@
-if (process.env.PORT === 5000) {
-  // carrega apenas no ambiente dev
-  require('dotenv').config();
-}
+
+// carrega apenas no ambiente dev
+require('dotenv').config()
+
 const express = require('express');
 //login functionality
 const bcrypt = require('bcrypt');
@@ -47,69 +47,6 @@ const placeholders = require('./db/placeholders');
 const imgur = require('./db/imgur');
 const db =  require('./db/connection');
 const app = express();
-// sonic -- início --
-const { Ingest, Search } = require('sonic-channel');
-const sonicChannelIngest = new Ingest({
-    host: process.env.SONIC_HOST,
-    port: 1491,
-    auth: process.env.SONIC_PW,
-});
-sonicChannelIngest.connect({
-    connected: () => {
-        console.log('Sonic Ingest conectou');
-    },
-    disconnected : (e) => {
-        console.error('Sonic Ingest desconectou', e);
-    },
-    timeout : (e) => {
-        console.error('Sonic Ingest timeout', e);
-    },
-    retrying : (e) => {
-        console.info('Sonic Ingest retrying', e);
-    },
-    error: (e) => {
-        return;
-        console.error(e);
-    }
-});
-const sonicChannelSearch = new Search({
-    host: process.env.SONIC_HOST,
-    port: 1491,
-    auth: process.env.SONIC_PW,
-});
-const conect_tst = sonicChannelSearch.connect({
-    connected: () => {
-        console.log('Sonic Search conectou');
-    },
-    disconnected : (e) => {
-        console.error('Sonic Search desconectou', e);
-    },
-    timeout : (e) => {
-        console.error('Sonic Search timeout', e);
-    },
-    retrying : (e) => {
-        console.info('Sonic Search retrying', e);
-    },
-    error: (e) => {
-        return;
-        console.error('biru ru',e);
-    }
-});
-
-function sonic_register_post(id, username, subject, message) {
-  sonicChannelIngest.push('posts', 'default',`post:${id}`, `${username} ${subject} ${message}`, {
-    lang: 'por'
-  }).then(() => console.log(`post #${id} indexado na busca.`))
-  .catch((e) => console.error(`erro ao indexar post #${id}`, e));
-}
-function sonic_register_reply(message_id, id, username, content){
-  sonicChannelIngest.push('replies', 'default',`post:${message_id}:reply:${id}`, `${username} ${content}`, {
-    lang: 'por'
-  }).then(() => console.log(`reply #${id} indexada na busca.`))
-  .catch((e) => console.error(`erro ao indexar reply #${id}`, e));
-}
-
-// sonic -- fim --
 
 app.use(unless(['/videoupload','/gifupload','/imgupload'], fileUpload()));
 
@@ -133,6 +70,7 @@ initializePassport(
   email => findUserByEmail(email),
   id => findUserById(id)
 );
+
 async function findUserById(id){
   const { rows } = await db.query('SELECT * FROM users WHERE id = $1;',[id]);
   return rows[0];
@@ -264,12 +202,6 @@ app.post('/register', async function(req, res, next) {
 
 app.post('/messages', async (req,res) => {
 	messages.postMessage(req).then((message) => {
-    if(!message.error && !message.details){
-      const parsedMessage = JSON.parse(message);
-      if (!parsedMessage.error && !parsedMessage.details){
-        sonic_register_post(parsedMessage.id, parsedMessage.username, parsedMessage.subject, parsedMessage.message);
-      }
-    }
 		res.json(message);
 	});
 });
@@ -277,11 +209,6 @@ app.post('/messages', async (req,res) => {
 app.post('/replies', async (req, res) => {
 
   replies.postReply(req).then((reply) => {
-    console.log(reply);
-    if (!reply.error && !reply.details) {
-      const parsedReply = JSON.parse(reply);
-      sonic_register_reply(parsedReply.message_id, parsedReply.id, parsedReply.username, parsedReply.content);
-    }
     res.json(reply);
   })
 
@@ -323,108 +250,6 @@ app.post('/videoupload', upload.single('video'), async (req, res) => {
     res.json(resp);
   })
 })
-// rotas para uso do sonic
-// registro de posts
-app.post('/sonic-register-posts', async (req, res) => {
-    const { subject, message, id } = req.body;
-    // Cadastrar posts no banco
-    await sonicChannelIngest.push('posts', 'default', `post:${id}`, `${subject} ${message}`, {
-        lang: 'por'
-    })
-    res.status(201).send();
-});
-// registro de replies
-app.post('/sonic-register-replies', async (req, res) => {
-    const { post_id, id, content } = req.body;
-    // Cadastrar posts no banco
-    await sonicChannelIngest.push('replies', 'default', `reply:${id}`, `${post_id} ${content}`, {
-        lang: 'por'
-    })
-    res.status(201).send();
-});
-
-//registra todos posts
-// app.get('/sonic-register-all-posts', async (req, res) => {
-//     const list = [];
-//     const allMsgs = await messages.getAll();
-//     for (let i = 0; i < allMsgs.results.length; i++) {
-//         var msg = allMsgs.results[i];
-//        await sonicChannelIngest.push('posts', 'default',`post:${msg.id}`, `${msg.username} ${msg.subject} ${msg.message}`, {
-//            lang: 'por'
-//        });
-//        list.push(msg.id);
-//     }
-//     res.json(list);
-// });
-// registra todas as respostas
-// app.get('/sonic-register-all-replies', async (req, res) => {
-//   const list = [];
-//   const allReplies = await replies.getAll();
-//   for (let i = 0; i < allReplies.results.length; i++) {
-//     var reply = allReplies.results[i];
-//     await sonicChannelIngest.push('replies', 'default',`post:${reply.message_id}:reply:${reply.id}`, `${reply.username} ${reply.subject} ${reply.content}`, {
-//       lang: 'por'
-//     });
-//     list.push(reply.id);
-//   }
-//   res.json(list);
-// });
-
-app.get('/search-posts', async (req, res) => {
-  const { q } = req.query;
-  if (!q) return;
-  try {
-    const ping = await sonicChannelSearch.ping();
-    const results = await sonicChannelSearch.query(
-      'posts',
-      'default',
-      q,
-      { lang : 'por'}
-    );
-    // ao invés de retornar os ids pro cliente, e então
-    // fazer a requisição para o banco,
-    // vou consultar o banco pelo servidor e
-    // já enviar os resultados
-    const posts_ids = results.map((p) => p.split(':')[1]);
-    messages.getManyById(posts_ids).then((messages) => res.json(messages));
-  } catch(e) {
-    // cai neste catch se o servidor de busca estiver fora
-    res.status(503).json({message: "Servidor de busca em manutenção."});
-  }
-});
-app.get('/search-replies', async (req, res) => {
-    const { q } = req.query;
-    if (!q) return;
-    try {
-      const ping = await sonicChannelSearch.ping();
-      const results = await sonicChannelSearch.query(
-        'replies',
-        'default',
-        q,
-        { lang : 'por'}
-      );
-      const reply_ids = results.map((r) => r.split(':')[3]);
-      replies.getManyById(reply_ids).then((replies) => res.json(replies));
-    } catch(e) {
-      // cai neste catch se o servidor de busca estiver fora
-      res.status(503).json({message: "Servidor de busca em manutenção."});
-    }
-});
-
-// -- rota sonic suggest fora de uso --
-// app.get('/sonic-suggest', async (req, res) => {
-//     const { q } = req.query;
-// 
-//     const results = await sonicChannelSearch.suggest(
-//         'posts',
-//         'default',
-//         q,
-//         { limit: 5 }
-//     );
-// 
-//     return res.json(results);
-// });
-// -- rota sonic suggest fora de uso --
 
 app.delete('/logout', (req, res) => {
   req.logOut();
