@@ -1,6 +1,8 @@
 
 // carrega apenas no ambiente dev
-require('dotenv').config()
+if (process.env.PORT == 5000) {
+  require('dotenv').config();
+}
 
 const express = require('express');
 //login functionality
