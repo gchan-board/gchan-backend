@@ -1,21 +1,3 @@
-## Sonic search no local
-
-Basicamente, seguir as instruções do [install from source](git@github.com:valeriansaliou/sonic.git). \(Precisa instalar cargo/rust\)
-
-    git clone git@github.com:valeriansaliou/sonic.git && cd sonic && cargo build --release
-
-Depois,
-
-    ./target/release/sonic -c config.cfg
-
-Reinicie o servidor e verifique que
-
-> 8:25:41 PM dev.1 |  Listening on 5000.
-
-> 8:25:41 PM dev.1 |  Sonic Ingest conectou
-
-> 8:25:41 PM dev.1 |  Sonic Search conectou
-
 ## Configuração do postgresql no local
 
 Dependendo da configuração no local, o erro
