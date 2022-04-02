@@ -6,3 +6,4 @@ fix_db.sql
 postgressing.txt
 latest.dump*
 .nvmrc
+node_modules
