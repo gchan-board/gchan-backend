@@ -52,7 +52,7 @@ const jsDocsOptions = {
     info: {
       title: 'GCHAN API',
       version: '1.0.0',
-      description: 'Documentation for the [gchan](https://gchan.com.br) API.\n More information in the project\'s [github repository](https://github.com/guites/gchan-backend).',
+      description: 'Documentation for the [gchan](https://gchan.com.br) API.\n More information in the project\'s [github repository](https://github.com/guites/gchan-backend).\nReach out on twitter! <https://twitter.com/gui_garcia67>',
     },
   },
   apis: ['index.js'],
@@ -428,11 +428,18 @@ app.post("/messages", async (req, res) => {
  *             message_id:
  *               type: integer
  *     responses:
- *       200:
+ *       201:
  *         description: Created.
+ *       400:
+ *         description: Validation error. Check the \"details\" property of response object.
+ *       404:
+ *         description: The message you are replying to does not exists.
+ *       500:
+ *         description: Something went awfully wrong. Please report to <https://twitter.com/gui_garcia67>
  */
 app.post("/replies", async (req, res) => {
   replies.postReply(req).then((reply) => {
+    res.status(reply.status_code);
     res.json(reply);
   });
 });

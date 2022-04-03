@@ -1,12 +1,9 @@
 const Joi = require('joi');
-const { query } = require('./connection');
 const db = require('./connection'); //relative path to file that exports
-// libs para verificar o captcha
-const fetch = require('node-fetch');
-const FormData = require('form-data');
+const { testCaptcha } = require('../helpers');
 
 const replySchema = Joi.object().keys({
-  message_id: Joi.string().alphanum().required(),
+  message_id: Joi.number(),
 	username: Joi.string().max(30).required(),
 	content: Joi.string().max(1000).required(),
 	imageURL: Joi.string().uri({
@@ -36,23 +33,8 @@ async function logIp(table_pk, table_name, action, ip_array, score) {
   }
 }
 
-async function testCaptcha(token) {
-  var formdata = new FormData();
-  formdata.append("secret", process.env.RECAPTCHA3_KEY);
-  formdata.append("response", token);
-  var requestOptions = {
-    method: 'POST',
-    body: formdata,
-  };
-  return fetch("https://www.google.com/recaptcha/api/siteverify", requestOptions)
-  .then(response => response.json())
-  .catch(error => error);
-}
-
 async function postReply(reply) {
   const replyBody = reply.body;
-
-  // para registro do IP / reCAPTCHA
   const replyHeaders = reply.headers;
   const replyConnection = reply.connection;
   const x_real_ip = replyHeaders['x-real-ip'];
@@ -60,86 +42,68 @@ async function postReply(reply) {
   const x_forwarded_for = replyHeaders['x-forwarded-for'];
   const ip_array = [x_real_ip, connection_remote_address, x_forwarded_for];
 
-  if (!replyBody.recaptcha_token) {
-    return { error: true, origin: 'recaptcha', code: 'empty' };
-  }
-  const captchaResponse = await testCaptcha(replyBody.recaptcha_token);
-  if (captchaResponse.success) {
-    if(process.env.CORS_ORIGIN_URL.includes(captchaResponse.hostname)) {
-      if (!replyBody.username) replyBody.username = 'Anonymous';
-      if (!replyBody.imageURL) replyBody.imageURL = '';
-      const result = replySchema.validate(replyBody);
-      if(result.error == null){
-        try{
-          const sql = 'INSERT INTO replies (username, content, imageURL, user_id, message_id) VALUES ($1,$2,$3,$4,$5) RETURNING id';
-          const values = [
-            replyBody.username,
-            replyBody.content,
-            replyBody.imageURL,
-            replyBody.user_id,
-            replyBody.message_id
-          ];
-          const client = await db.connect();
-          try {
-            const query_res = await client.query(sql,values);
+  const captchaResponse = await testCaptcha(replyBody);
+  if (!captchaResponse.success) return {...captchaResponse, "status_code": 400};
 
-            const currentDateTime = new Date(); 
-
-            const reply_id = query_res.rows[0].id;
-
-            const returnJSON = {
-              message_id:values[4],
-              username:values[0],
-              content:values[1],
-              imageurl:values[2],
-              created:currentDateTime,
-              id:reply_id,
-              user_id:values[3],
-            };
-            try {
-              const updated_sql = 'UPDATE messages SET updated_at = NOW() WHERE id = $1';
-              const updated_values = [replyBody.message_id];
-              try {
-                const updated_query = await client.query(updated_sql, updated_values);
-                client.release();
-                logIp(reply_id, 'replies', 'insert', ip_array, captchaResponse.score);
-                return JSON.stringify(returnJSON);
-              } catch (err) {
-                return JSON.stringify(returnJSON);
-              }
-            } catch (err) {
-              return JSON.stringify(returnJSON);
-            }
-          } catch (err) {
-            if (err.code == "23505") {
-             return {
-               error: true,
-               origin: 'psql',
-               code: '23505'
-             };
-            }
-          }
-        } catch (err){
-          console.error(err);
-          return (err);
-        }
-      } else {
-        return result.error; 
-      }
-    } else {
+  if (!replyBody.username) replyBody.username = 'Anonymous';
+  if (!replyBody.imageURL) replyBody.imageURL = '';
+  const result = replySchema.validate(replyBody);
+  if (result.error) return {...result.error, "status_code": 400};
+  let client, returnJSON;
+  try{
+    const sql = 'INSERT INTO replies (username, content, imageURL, user_id, message_id) VALUES ($1,$2,$3,$4,$5) RETURNING id';
+    const values = [
+      replyBody.username,
+      replyBody.content,
+      replyBody.imageURL,
+      replyBody.user_id,
+      replyBody.message_id
+    ];
+    client = await db.connect();
+    // inserts reply to database
+    const query_res = await client.query(sql,values);
+    const currentDateTime = new Date(); 
+    const reply_id = query_res.rows[0].id;
+    returnJSON = {
+      message_id:values[4],
+      username:values[0],
+      content:values[1],
+      imageurl:values[2],
+      created:currentDateTime,
+      id:reply_id,
+      user_id:values[3],
+    };
+    const updated_sql = 'UPDATE messages SET updated_at = NOW() WHERE id = $1';
+    // updates the post which has been replied to
+    await client.query(updated_sql, [replyBody.message_id]);
+    client.release();
+    logIp(reply_id, 'replies', 'insert', ip_array, captchaResponse.score);
+    return {...returnJSON, "status_code": 201};
+  } catch (err){
+    console.error(err);
+    if (err.code == "23505") {
       return {
         error: true,
-        origin: 'recaptcha',
-        code: 'hostname'
-      }
+        origin: 'psql',
+        code: '23505',
+        status_code: 400,
+        details: 'Duplicated reply.'
+      };
     }
-  } else {
-    return {
-      error: true,
-      origin: 'recaptcha',
-      code: 'failure'
+    if (err.code == "23503") {
+      return {
+        error: true,
+        origin: 'psql',
+        code: '23503',
+        status_code: 404,
+        details: 'Message not found.'
+      };
     }
+    if (typeof returnJSON === 'object') return {...returnJSON, "status_code": 201};
+    return ({...err, "status_code": 500});
   }
+      
+    
 }
 
 async function getReplyFromMessageId(message_id) {
