@@ -1,6 +1,6 @@
 const Joi = require('joi');
 const db = require('./connection'); //relative path to file that exports
-const { testCaptcha } = require('../helpers');
+const { testCaptcha, logIp } = require('../helpers');
 
 const replySchema = Joi.object().keys({
   message_id: Joi.number(),
@@ -15,32 +15,8 @@ const replySchema = Joi.object().keys({
   recaptcha_token: Joi.string().allow('')
 });
 
-async function logIp(table_pk, table_name, action, ip_array, score) {
-  try {
-    const sql = 'INSERT INTO post_logs (table_pk, table_name, action, x_real_ip, remoteAddress, x_forwarded_for, score) VALUES ($1, $2, $3, $4, $5, $6, $7)';
-    let sql_data = [table_pk, table_name, action];
-    sql_data = sql_data.concat(ip_array);
-    sql_data.push(score);
-    const client = await db.connect();
-    try {
-      const query_res = client.query(sql, sql_data);
-      client.release();
-    } catch (err) {
-      console.log('erro logId client.query, ', err);
-    }
-  } catch (err) {
-    console.log('erro logId db.connect, ', err);
-  }
-}
-
 async function postReply(reply) {
   const replyBody = reply.body;
-  const replyHeaders = reply.headers;
-  const replyConnection = reply.connection;
-  const x_real_ip = replyHeaders['x-real-ip'];
-  const connection_remote_address = replyConnection.remoteAddress;
-  const x_forwarded_for = replyHeaders['x-forwarded-for'];
-  const ip_array = [x_real_ip, connection_remote_address, x_forwarded_for];
 
   const captchaResponse = await testCaptcha(replyBody);
   if (!captchaResponse.success) return {...captchaResponse, "status_code": 400};
@@ -77,7 +53,7 @@ async function postReply(reply) {
     // updates the post which has been replied to
     await client.query(updated_sql, [replyBody.message_id]);
     client.release();
-    logIp(reply_id, 'replies', 'insert', ip_array, captchaResponse.score);
+    logIp(reply_id, 'replies', 'insert', captchaResponse.score, reply);
     return {...returnJSON, "status_code": 201};
   } catch (err){
     console.error(err);
@@ -100,7 +76,10 @@ async function postReply(reply) {
       };
     }
     if (typeof returnJSON === 'object') return {...returnJSON, "status_code": 201};
-    return ({...err, "status_code": 500});
+    return {
+      "status_code": 500,
+      "details": err.message ? err.message : JSON.stringify(err),
+    }
   }
       
     

@@ -1,5 +1,6 @@
 const fetch = require('node-fetch');
 const FormData = require('form-data');
+const db = require('./db/connection');
 
 async function testCaptcha(messageBody) {
 
@@ -34,6 +35,30 @@ async function testCaptcha(messageBody) {
   }
 }
 
+async function logIp(table_pk, table_name, action, score, request) {
+  const headers = request.headers;
+  const remote_address = request.connection.remoteAddress;
+  const x_real_ip = headers['x-real-ip'];
+  const x_forwarded_for = headers['x-forwarded-for'];
+  const ip_array = [x_real_ip, remote_address, x_forwarded_for];
+  try {
+    const sql = 'INSERT INTO post_logs (table_pk, table_name, action, x_real_ip, remoteAddress, x_forwarded_for, score) VALUES ($1, $2, $3, $4, $5, $6, $7)';
+    let sql_data = [table_pk, table_name, action];
+    sql_data = sql_data.concat(ip_array);
+    sql_data.push(score);
+    const client = await db.connect();
+    try {
+      client.query(sql, sql_data);
+      client.release();
+    } catch (err) {
+      console.log('erro logId client.query, ', err);
+    }
+  } catch (err) {
+    console.log('erro logId db.connect, ', err);
+  }
+}
+
 module.exports = {
-    testCaptcha
+    testCaptcha,
+    logIp
 };

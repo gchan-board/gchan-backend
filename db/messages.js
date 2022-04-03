@@ -1,6 +1,6 @@
 const Joi = require('joi');
 const db = require('./connection');
-const { testCaptcha } = require('../helpers');
+const { testCaptcha, logIp } = require('../helpers');
 
 const schema = Joi.object().keys({
 	username: Joi.string().max(30).required(),
@@ -199,32 +199,8 @@ async function postMessageFromSlack(post){
   }
 }
 
-async function logIp(table_pk, table_name, action, ip_array, score) {
-  try {
-    const sql = 'INSERT INTO post_logs (table_pk, table_name, action, x_real_ip, remoteAddress, x_forwarded_for, score) VALUES ($1, $2, $3, $4, $5, $6, $7)';
-    let sql_data = [table_pk, table_name, action];
-    sql_data = sql_data.concat(ip_array);
-    sql_data.push(score);
-    const client = await db.connect();
-    try {
-      const query_res = client.query(sql, sql_data);
-      client.release();
-    } catch (err) {
-      console.log('erro logId client.query, ', err);
-    }
-  } catch (err) {
-    console.log('erro logId db.connect, ', err);
-  }
-}
-
 async function postMessage(message){
   const messageBody = message.body;
-  const messageHeaders = message.headers;
-  const messageConnection = message.connection;
-  const x_real_ip = messageHeaders['x-real-ip'];
-  const connection_remote_address = messageConnection.remoteAddress;
-  const x_forwarded_for = messageHeaders['x-forwarded-for'];
-  const ip_array = [x_real_ip, connection_remote_address, x_forwarded_for];
 
   const captchaResponse = await testCaptcha(messageBody);
   if (!captchaResponse.success) return {...captchaResponse, "status_code": 400};
@@ -262,7 +238,7 @@ async function postMessage(message){
       user_id: values[6],
       gif_origin: values[7]
     };
-    logIp(post_id, 'messages', 'insert', ip_array, captchaResponse.score);
+    logIp(post_id, 'messages', 'insert', captchaResponse.score, message);
     return {...returnJSON, "status_code": 201};
   } catch (err){
     // 23505 is thrown by postgres for duplicated messages
@@ -275,7 +251,10 @@ async function postMessage(message){
         status_code: 400,
       };
     }
-    return ({...err, "status_code": 500});
+    return {
+      "status_code": 500,
+      "details": err.message ? err.message : JSON.stringify(err),
+    }
   } finally {
     client.release();
   }
