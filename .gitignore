@@ -1,8 +1,4 @@
-psql_local.png
-psql_local.sh
 heroku.log
 .env
-fix_db.sql
-postgressing.txt
-latest.dump*
 .nvmrc
+node_modules
