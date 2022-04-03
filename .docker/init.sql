@@ -62,6 +62,8 @@ ALTER TABLE ONLY replies ALTER COLUMN id SET DEFAULT nextval('replies_id_seq'::r
 -- sets foreign key to message_id field
 ALTER TABLE ONLY replies
     ADD CONSTRAINT message_reply FOREIGN KEY (message_id) REFERENCES messages(id);
+-- combination of message_id, content and imageURL must be unique
+ALTER TABLE ONLY replies ADD CONSTRAINT replies_message_id_content_imageurl_key UNIQUE (message_id, content, imageurl);
 
 -- PLACEHOLDER TABLE
 CREATE TABLE placeholders (
