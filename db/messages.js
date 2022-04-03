@@ -1,9 +1,6 @@
 const Joi = require('joi');
-const { query } = require('./connection');
-const db = require('./connection'); //relative path to file that exports
-// libs para verificar o captcha
-const fetch = require('node-fetch');
-const FormData = require('form-data');
+const db = require('./connection');
+const { testCaptcha } = require('../helpers');
 
 const schema = Joi.object().keys({
 	username: Joi.string().max(30).required(),
@@ -40,8 +37,6 @@ const slackSchema = Joi.object().keys({
   }),
   trigger_id: Joi.string().required(),
 });
-
-// const messages = db.get('messages');
 
 async function getAll(){
 	try{
@@ -219,39 +214,6 @@ async function logIp(table_pk, table_name, action, ip_array, score) {
     }
   } catch (err) {
     console.log('erro logId db.connect, ', err);
-  }
-}
-
-async function testCaptcha(messageBody) {
-
-  const environment = process.env.NODE_ENV;
-  const cors_url = process.env.CORS_ORIGIN_URL;
-  const recaptchaKey = process.env.RECAPTCHA3_KEY;
-
-  // recaptcha is not validated on DEV environment
-  if (environment === 'development') return { success: true };
-
-  try {
-    if (!messageBody.recaptcha_token) throw new Error('recaptcha_token must be sent along with POST body');
-    const captchaToken = messageBody.recaptcha_token;
-    const formdata = new FormData();
-    formdata.append("secret", recaptchaKey);
-    formdata.append("response", captchaToken);
-    const requestOptions = {
-      method: 'POST',
-      body: formdata,
-    };
-    const response = await fetch("https://www.google.com/recaptcha/api/siteverify", requestOptions);
-    const respObj = await response.json();
-    if (!cors_url.includes(respObj.hostname)) throw new Error('Hostname not allowed by CORS policy.');
-    return respObj;
-  } catch(error) {
-    console.log(error);
-    // TODO: this might spill application data to the front end
-    return {
-      success: false,
-      'details': error.message ? error.message : JSON.stringify(error)
-    };
   }
 }
 
