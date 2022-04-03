@@ -385,12 +385,16 @@ app.post("/register", async function (req, res, next) {
  *             gif_origin:
  *               type: string
  *     responses:
- *       200:
+ *       201:
  *         description: Created.
+ *       400:
+ *         description: Validation error. Check the \"details\" property of response object.
+ *       500:
+ *         description: An unexpected situation arised. Run to the hills.
  */
 app.post("/messages", async (req, res) => {
-  // TODO: correctly set status codes for creation (201), recaptcha failure, validation error, etc
   messages.postMessage(req).then((message) => {
+    res.status(message.status_code);
     res.json(message);
   });
 });

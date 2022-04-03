@@ -222,17 +222,37 @@ async function logIp(table_pk, table_name, action, ip_array, score) {
   }
 }
 
-async function testCaptcha(token) {
-  var formdata = new FormData();
-  formdata.append("secret", process.env.RECAPTCHA3_KEY);
-  formdata.append("response", token);
-  var requestOptions = {
-    method: 'POST',
-    body: formdata,
-  };
-  return fetch("https://www.google.com/recaptcha/api/siteverify", requestOptions)
-  .then(response => response.json())
-  .catch(error => error);
+async function testCaptcha(messageBody) {
+
+  const environment = process.env.NODE_ENV;
+  const cors_url = process.env.CORS_ORIGIN_URL;
+  const recaptchaKey = process.env.RECAPTCHA3_KEY;
+
+  // recaptcha is not validated on DEV environment
+  if (environment === 'development') return { success: true };
+
+  try {
+    if (!messageBody.recaptcha_token) throw new Error('recaptcha_token must be sent along with POST body');
+    const captchaToken = messageBody.recaptcha_token;
+    const formdata = new FormData();
+    formdata.append("secret", recaptchaKey);
+    formdata.append("response", captchaToken);
+    const requestOptions = {
+      method: 'POST',
+      body: formdata,
+    };
+    const response = await fetch("https://www.google.com/recaptcha/api/siteverify", requestOptions);
+    const respObj = await response.json();
+    if (!cors_url.includes(respObj.hostname)) throw new Error('Hostname not allowed by CORS policy.');
+    return respObj;
+  } catch(error) {
+    console.log(error);
+    // TODO: this might spill application data to the front end
+    return {
+      success: false,
+      'details': error.message ? error.message : JSON.stringify(error)
+    };
+  }
 }
 
 async function postMessage(message){
@@ -243,81 +263,59 @@ async function postMessage(message){
   const connection_remote_address = messageConnection.remoteAddress;
   const x_forwarded_for = messageHeaders['x-forwarded-for'];
   const ip_array = [x_real_ip, connection_remote_address, x_forwarded_for];
-  if (!messageBody.recaptcha_token) {
-    // logIp(ip_array, 'empty'); // não vou logar tentativas com recaptcha falho
-    return {error: true, origin: 'recaptcha', code: 'empty'}
-  } 
-  const captchaResponse = await testCaptcha(messageBody.recaptcha_token);
-  if (captchaResponse.success) {
-    if(process.env.CORS_ORIGIN_URL.includes(captchaResponse.hostname)) {
-      if (!messageBody.username) messageBody.username = 'anônimo';
-      if (!messageBody.imageURL) messageBody.imageURL = '';
-      const result = schema.validate(messageBody);
-      if(result.error == null){
-        try{
-          const sql = 'INSERT INTO messages (username, subject, message, imageURL, giphyURL, options, user_id, gif_origin) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id';
-          const values = [
-            messageBody.username,
-            messageBody.subject,
-            messageBody.message,
-            messageBody.imageURL,
-            messageBody.giphyURL,
-            messageBody.options,
-            messageBody.user_id,
-            messageBody.gif_origin
-          ];
-          const client = await db.connect();
-          try {
-            const query_res = await client.query(sql,values);
-            const post_id = query_res.rows[0].id;
-            const currentDateTime = new Date();
-            const returnJSON = {
-              username: values[0],
-              subject: values[1],
-              message: values[2],
-              imageurl: values[3],
-              giphyURL: values[4],
-              options: values[5],
-              created: currentDateTime,
-              id: post_id,
-              user_id: values[6],
-              gif_origin: values[7]
-            };
-            logIp(post_id, 'messages', 'insert', ip_array, captchaResponse.score);
-            return JSON.stringify(returnJSON);
-          } catch (err) {
-            if (err.code == "23505") {
-             return {
-               error: true,
-               origin: 'psql',
-               code: '23505'
-             };
-            }
-          } finally {
-            client.release();
-          }
-        } catch (err){
-          console.error(err);
-          return (err);
-        }
-      } else {
-        return result.error; 
-      }
-    } else {
-      // await logIp(ip, 'hostname'); // não vou logar tentativas com recaptcha falho
+
+  const captchaResponse = await testCaptcha(messageBody);
+  if (!captchaResponse.success) return {...captchaResponse, "status_code": 400};
+
+  if (!messageBody.username) messageBody.username = 'anônimo';
+  if (!messageBody.imageURL) messageBody.imageURL = '';
+  const result = schema.validate(messageBody);
+  if (result.error) return {...result.error, "status_code": 400};
+  let client;
+  try {
+    const sql = 'INSERT INTO messages (username, subject, message, imageURL, giphyURL, options, user_id, gif_origin) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id';
+    const values = [
+      messageBody.username,
+      messageBody.subject,
+      messageBody.message,
+      messageBody.imageURL,
+      messageBody.giphyURL,
+      messageBody.options,
+      messageBody.user_id,
+      messageBody.gif_origin
+    ];
+    client = await db.connect();
+    const query_res = await client.query(sql,values);
+    const post_id = query_res.rows[0].id;
+    const currentDateTime = new Date();
+    const returnJSON = {
+      username: values[0],
+      subject: values[1],
+      message: values[2],
+      imageurl: values[3],
+      giphyURL: values[4],
+      options: values[5],
+      created: currentDateTime,
+      id: post_id,
+      user_id: values[6],
+      gif_origin: values[7]
+    };
+    logIp(post_id, 'messages', 'insert', ip_array, captchaResponse.score);
+    return {...returnJSON, "status_code": 201};
+  } catch (err){
+    // 23505 is thrown by postgres for duplicated messages
+    if (err.code == "23505") {
       return {
         error: true,
-        origin: 'recaptcha',
-        code: 'hostname',
-      }
+        origin: 'psql',
+        code: '23505',
+        details: 'Duplicated message',
+        status_code: 400,
+      };
     }
-  } else {
-    // await logIp(ip_array,'failure'); // não vou logar tentativas com recaptcha falho
-    return {
-      error: true,
-      origin: 'recaptcha',
-      code: 'failure',
-    }
+    return ({...err, "status_code": 500});
+  } finally {
+    client.release();
   }
 }
 
