@@ -44,6 +44,23 @@ const imgur = require("./db/imgur");
 const db = require("./db/connection");
 const app = express();
 
+// auto generated open-api for express -- start
+const swaggerJsdoc = require('swagger-jsdoc');
+const jsDocsOptions = {
+  swaggerDefinition: {
+    info: {
+      title: 'gchan API',
+      version: '1.0.0',
+      description: 'Auto generated documentation for the gchan API',
+    },
+  },
+  apis: ['index.js'],
+};
+const jsDocsSpecs = swaggerJsdoc(jsDocsOptions);
+const swaggerUi = require('swagger-ui-express');
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(jsDocsSpecs));
+// auto generated open-api for express -- end
+
 app.use(unless(["/videoupload", "/gifupload", "/imgupload"], fileUpload()));
 
 app.use(morgan("tiny"));
