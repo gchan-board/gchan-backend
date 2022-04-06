@@ -18,26 +18,6 @@ const schema = Joi.object().keys({
   recaptcha_token: Joi.string().allow(''),
 });
 
-const slackSchema = Joi.object().keys({
-  token: Joi.string().alphanum().required(),
-  team_id: Joi.string().alphanum().required(),
-  team_domain: Joi.string().alphanum().required(),
-  channel_id: Joi.string().alphanum().required(),
-  channel_name: Joi.string().alphanum().required(),
-  user_id: Joi.string().alphanum().required(),
-  user_name: Joi.string().required(),
-  command: Joi.string().required(),
-  text: Joi.string().required(),
-  api_app_id: Joi.string().alphanum().required(),
-  is_enterprise_install: Joi.string().max(5),
-  response_url: Joi.string().uri({
-    scheme: [
-      /https/
-    ]
-  }),
-  trigger_id: Joi.string().required(),
-});
-
 async function getAll(){
 	try{
 		const client = await db.connect();
@@ -160,45 +140,6 @@ async function deleteMessage(messageID){
   }
 }
 
-async function postMessageFromSlack(post){
-  const postBody = post.body;
-  if(postBody.token != process.env.SLACK_TOKEN) return res.json('invalid slack token');
-  const result = slackSchema.validate(postBody);
-  if(result.error == null){
-    const message = {};
-    const payload = postBody.text.split(';');
-    if(payload.length < 2) return JSON.stringify({'url': process.env.CORS_ORIGIN_URL + '/g', 'mensagem': '(⌐■_■) utilize no formato /gchan minha mensagem ; https://wwww.urldaminhaimagem.com/ou_gif/ou_video ; meu nome (em branco fica anônimo)'});
-    if(payload.length > 2){
-      message.username = payload[2].trim();
-    } else {
-      message.username = 'anônimo';  
-    }
-    message.slack_id = postBody.user_id;
-    message.user_id = 0;
-    message.subject = 'slackin';
-    message.message = payload[0];
-    message.imageURL = payload[1].trim();
-    message.giphyURL = '';
-    try{
-      const sql = 'INSERT INTO messages (username, subject, message, imageURL, giphyURL, user_id) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id';
-      const values = [message.username, message.subject, message.message, message.imageURL, message.giphyURL, message.user_id];
-      const client = await db.connect();
-      try {
-        const query_res = await client.query(sql, values);
-        client.release();
-        return JSON.stringify({'url': 'https://gchan.com.br', 'mensagem': 'obrigado por usar o gchan (⌐■_■)'});
-      } catch(err){
-        client.release();
-      }
-    } catch(err) {
-			console.error(err);
-			return (err);
-    }
-  } else {
-    return Promise.reject(result.error);
-  }
-}
-
 async function postMessage(message){
   const messageBody = message.body;
 
@@ -264,9 +205,6 @@ module.exports.deleteMessage = async function(){
   return deleteMessage();
 }
 
-module.exports.postMessageFromSlack = async function(){
-  return postMessageFromSlack();
-}
 module.exports.postMessage = async function(){
 	return postMessage();
 }
@@ -282,13 +220,12 @@ module.exports.getAllOffset = async function(){
 module.exports.getOne = async function(){
 	return getOne();
 }
+
 module.exports = {
-  postMessageFromSlack,
   postMessage,
   getAll,
   getAllOffset,
   getOne,
   getManyById,
   deleteMessage,
-	schema
 };

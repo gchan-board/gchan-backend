@@ -2,26 +2,6 @@ const fetch = require('node-fetch');
 const FormData = require('form-data');
 const fs = require("fs");
 
-// async function postImg(post) {
-
-//   var formdata = new FormData();
-//   formdata.append("image", post.image);
-
-//   var requestOptions = {
-//     method: 'POST',
-//     headers: {
-//       Authorization: "Client-ID 3435e574a9859d1",
-//       // 'Content-Type': "application/octet-stream",
-//     },
-//     body: formdata,
-//     redirect: 'follow'
-//   };
-
-//   return fetch("https://api.imgur.com/3/image", requestOptions)
-//     .then(response => response.json())
-//     .catch(error => error.json());
-// }
-
 async function postImg(filepath, filename) {
 
   var formdata = new FormData();

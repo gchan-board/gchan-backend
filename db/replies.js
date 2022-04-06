@@ -1,5 +1,5 @@
 const Joi = require('joi');
-const db = require('./connection'); //relative path to file that exports
+const db = require('./connection');
 const { testCaptcha, logIp } = require('../helpers');
 
 const replySchema = Joi.object().keys({
@@ -191,15 +191,19 @@ async function getManyById(ids) {
 module.exports.getOne = async function() {
   return getOne();
 }
+
 module.exports.getAll = async function() {
   return getAll();
 }
+
 module.exports.postReply = async function(){
   return postReply();
 }
+
 module.exports.getReplyFromMessageId = async function(){
   return getReplyFromMessageId();
 }
+
 module.exports = {
   getOne,
   getManyById,

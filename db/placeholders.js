@@ -15,6 +15,7 @@ async function getRandom(){
 module.exports.getRandom = async function(){
 	return getRandom();
 }
+
 module.exports = {
   getRandom,
 };

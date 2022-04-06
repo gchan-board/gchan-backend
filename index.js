@@ -1,10 +1,5 @@
 const express = require("express");
-//login functionality
-const bcrypt = require("bcrypt");
-const passport = require("passport");
-const flash = require("express-flash");
-const session = require("express-session");
-//middleware below
+//middleware
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const morgan = require("morgan");
@@ -36,13 +31,11 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-const login = require("./db/login");
-const messages = require("./db/messages"); //require é no nome do arquivo sem a extensão
+const messages = require("./db/messages");
 const marquees = require("./db/marquees");
 const replies = require("./db/replies");
 const placeholders = require("./db/placeholders");
 const imgur = require("./db/imgur");
-const db = require("./db/connection");
 const app = express();
 
 // auto generated open-api for express -- start
@@ -76,35 +69,6 @@ app.use(bodyParser.urlencoded({ extended: false }));
 
 // para receber imagens/videos e enviar pro imgur
 app.use(express.static("uploads"));
-
-app.use(flash());
-const initializePassport = require("./db/passport-config");
-initializePassport(
-  passport,
-  (email) => findUserByEmail(email),
-  (id) => findUserById(id)
-);
-async function findUserById(id) {
-  const { rows } = await db.query("SELECT * FROM users WHERE id = $1;", [id]);
-  return rows[0];
-}
-async function findUserByEmail(email) {
-  const { rows } = await db.query("SELECT * FROM users WHERE email = $1;", [
-    email,
-  ]);
-  return rows[0];
-}
-
-app.use(
-  session({
-    secret: "secret",
-    resave: false,
-    saveUninitialized: false,
-  })
-);
-
-app.use(passport.initialize());
-app.use(passport.session());
 
 /**
  * @openapi
@@ -214,6 +178,7 @@ app.get("/replies", async (req, res) => {
  *         description: Success.
  */
 app.get("/replies/:post_id", async (req, res) => {
+  // TODO: correctly return status codes
   replies
     .getReplyFromMessageId(req.params.post_id)
     .then((replies) => res.json(replies));
@@ -236,6 +201,7 @@ app.get("/replies/:post_id", async (req, res) => {
  *         description: Success.
  */
 app.get("/reply/:id", async (req, res) => {
+  // TODO: correctly return status codes for error, 404, etc
   replies.getOne(req.params.id).then((reply) => res.json(reply));
 });
 
@@ -252,19 +218,6 @@ app.get("/marquee", async (req, res) => {
   marquees.getAll().then((allMarquees) => {
     res.json(allMarquees);
   });
-});
-
-// app.post('/login', passport.authenticate('local', {
-//   successRedirect: '/',
-//   failureRedirect: '/login',
-// }))
-
-app.get("/login", function (req, res, next) {
-  if (req.isAuthenticated()) {
-    return res.send(req.user);
-  } else {
-    return res.send(false);
-  }
 });
 
 /**
@@ -309,46 +262,6 @@ app.get("/placeholders/:file", function (req, res, next) {
     res.status(404); res.json("'message': 'File not found.'");
   }
   res.sendFile(filePath);
-});
-
-app.post("/login", function (req, res, next) {
-  passport.authenticate("local", function (err, user, info) {
-    console.log(user);
-    if (err) {
-      return res.redirect("/info");
-    }
-    if (!user) {
-      console.log(info);
-      return res.json(info);
-    }
-    req.login(user, function (err) {
-      if (err) {
-        return next(err);
-      }
-      if (req.isAuthenticated()) {
-        return res.json(req.user);
-      }
-    });
-  })(req, res, next);
-});
-
-app.post("/register", async function (req, res, next) {
-  try {
-    const hashedPassword = await bcrypt.hash(req.body.password, 10);
-    const user = {
-      name: req.body.name,
-      email: req.body.email,
-      password: hashedPassword,
-    };
-    const { rows } = await db.query(
-      "INSERT INTO users (name,email,password) VALUES ($1,$2,$3);",
-      [user.name, user.email, user.password]
-    );
-    res.json("success");
-  } catch (e) {
-    console.log(e);
-    res.json(false);
-  }
 });
 
 /**
@@ -450,23 +363,18 @@ app.post("/marquee", async (req, res) => {
   });
 });
 
-app.post("/slack", async (req, res) => {
-  console.log(req.body);
-  messages.postMessageFromSlack(req).then((message) => {
-    res.json(message);
-  });
-});
-
 app.post("/imgupload", upload.single("image"), async (req, res) => {
   imgur.postImg(req.file.path, req.file.originalname).then((resp) => {
     res.json(resp);
   });
 });
+
 app.post("/gifupload", upload.single("image"), async (req, res) => {
   imgur.postGif(req.file.path, req.file.originalname).then((resp) => {
     res.json(resp);
   });
 });
+
 app.post("/videoupload", upload.single("video"), async (req, res) => {
   imgur.postVideo(req.file.path, req.file.originalname).then((resp) => {
     res.json(resp);
