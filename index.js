@@ -182,7 +182,6 @@ app.get("/replies", async (req, res) => {
  *         description: unexpected error. Please report via <https://github.com/guites/gchan-backend/issues>.
  */
 app.get("/replies/:post_id", async (req, res) => {
-  // TODO: correctly return status codes
   replies
     .getReplyFromMessageId(req.params.post_id)
     .then((replies) => {
@@ -386,23 +385,6 @@ app.post("/videoupload", upload.single("video"), async (req, res) => {
   imgur.postVideo(req.file.path, req.file.originalname).then((resp) => {
     res.json(resp);
   });
-});
-
-// TODO: remove this
-app.delete("/logout", (req, res) => {
-  req.logOut();
-  res.json({ login: false });
-});
-
-// TODO: remove this
-app.delete("/message/:id", (req, res) => {
-  if (req.isAuthenticated()) {
-    messages.deleteMessage(req.params.id).then((msg) => {
-      res.json(msg);
-    });
-  } else {
-    res.status(401).send("Necessário login via aplicação.");
-  }
 });
 
 app.delete("/imgur/:deletehash", (req, res) => {
