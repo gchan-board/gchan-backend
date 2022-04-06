@@ -176,12 +176,19 @@ app.get("/replies", async (req, res) => {
  *     responses:
  *       200:
  *         description: Success.
+ *       400:
+ *         description: Validation error. Check the \"details\" property of response object.
+ *       500:
+ *         description: unexpected error. Please report via <https://github.com/guites/gchan-backend/issues>.
  */
 app.get("/replies/:post_id", async (req, res) => {
   // TODO: correctly return status codes
   replies
     .getReplyFromMessageId(req.params.post_id)
-    .then((replies) => res.json(replies));
+    .then((replies) => {
+      res.status(replies.status_code);
+      res.json(replies.results);
+    });
 });
 
 /**
@@ -381,11 +388,13 @@ app.post("/videoupload", upload.single("video"), async (req, res) => {
   });
 });
 
+// TODO: remove this
 app.delete("/logout", (req, res) => {
   req.logOut();
   res.json({ login: false });
 });
 
+// TODO: remove this
 app.delete("/message/:id", (req, res) => {
   if (req.isAuthenticated()) {
     messages.deleteMessage(req.params.id).then((msg) => {

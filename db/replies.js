@@ -86,27 +86,33 @@ async function postReply(reply) {
 }
 
 async function getReplyFromMessageId(message_id) {
-  try{
+  try {
     const sql = 'SELECT * FROM replies WHERE message_id = $1 ORDER BY id ASC';
     const values = [message_id];
     const client = await db.connect();
-    try {
-      const query_res = await client.query(sql,values);
-      client.release();
-      if(query_res.rows.length > 0){
-        return (query_res.rows);
-      } else {
-        return {
-          error: true,
-          origin: 'psql',
-          code: 'no results'
-        };
-      }
-    } catch (err) {
-      return err;
-    }
+    const query_res = await client.query(sql,values);
+    client.release();
+    return {
+      "results" :query_res.rows,
+      "status_code": 200
+    };
   } catch (err){
-    return (err);
+    if (err.code == '22P02') {
+      return {
+        results: {
+          error: true,
+          details: 'Post Id must be and integer!',
+        },
+        status_code: 400,
+      };
+    }
+    return {
+      status_code: 500,
+      results: {
+        error: true,
+        details: "Something went horribly wrong!",
+      }
+    }
   }
 }
 async function getAll() {
