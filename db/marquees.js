@@ -1,59 +1,55 @@
-const db = require('./connection'); //relative path to file that exports
+const db = require('./connection');
 const Joi = require('joi');
 
 const schema = Joi.object().keys({
   content: Joi.string().max(50).required(),
+  // TODO: remove this field, validate that href is a valid url when it is sent
   has_url: Joi.bool(),
-  href: Joi.string().uri({
-    scheme: [
-      /https?/
-    ]
-  }).allow(''),
+  href: Joi.string().uri({ scheme: [ /https?/ ]})
+    .when('has_url',{
+      is: true,
+      then: Joi.required(),
+      otherwise: Joi.forbidden()
+    })
 });
 
 async function postMarquee(marquee){
   const marqueeBody = marquee;
-  if(!marqueeBody.href) {
-    marqueeBody.href = '';
-  }
-  if(!marqueeBody.has_url || marqueeBody.has_url == 'false'){
-    marqueeBody.has_url = false;
-    marqueeBody.href = '';
-  }
   const result = schema.validate(marqueeBody);
-  if(result.error == null){
-    marqueeBody.created = new Date();
-    try{
-      const sql = 'INSERT INTO marquees (content, created, href, has_url) VALUES ($1,$2,$3,$4) RETURNING id';
-      const values = [marqueeBody.content, marqueeBody.created, marqueeBody.href, marqueeBody.has_url];
-      const client = await db.connect();
-      try {
-        const query_res = await client.query(sql,values);
-        client.release();
-        const returnJSON = {
-          content:values[0],
-          has_url:values[3],
-          href:values[2],
-          id:query_res.rows[0].id,
+  if (result.error) return {...result.error, "status_code": 400 }
+  marqueeBody.created = new Date(); // TODO: this should be auto generated in the database
+  let client;
+  try{
+    const sql = 'INSERT INTO marquees (content, created, href, has_url) VALUES ($1,$2,$3,$4) RETURNING id';
+    const values = [marqueeBody.content, marqueeBody.created, marqueeBody.href, marqueeBody.has_url];
+    client = await db.connect();
+    const query_res = await client.query(sql,values);
+    const returnJSON = {
+      content:values[0],
+      has_url:values[3],
+      href:values[2],
+      id:query_res.rows[0].id,
+    };
+    return {...returnJSON, "status_code": 201};
+    } catch (err) {
+      if(err.code == '23505') {
+        return {
+          error: true,
+          origin: 'psql',
+          code: '23505',
+          details: 'Duplicated item',
+          status_code: 400
         };
-        return JSON.stringify(returnJSON);
-      } catch (err) {
-        console.log(err);
-        if(err.code == '23505'){
-          return {
-            error: true,
-            origin: 'psql',
-            code: '23505'
-          };
-        }
       }
-    } catch(err) {
-      console.log(err);
+      return {
+        "status_code": 500,
+        "details": err.message ? err.message : JSON.stringify(err),
+      }
+    } finally {
+      client.release();
     }
-  } else {
-		return Promise.reject(result.error);
-	}
 }
+
 async function getAll(){
 	try{
 		const client = await db.connect();

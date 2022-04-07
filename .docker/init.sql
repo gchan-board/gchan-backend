@@ -254,6 +254,12 @@ INSERT INTO placeholders (file) VALUES
 ('pikachu5.gif'),('pikachu6.gif'),('pikachu7.gif'),('pikachu8.gif'),('pikachu9.gif'),
 ('renamon1.gif'),('sad1.gif'),('sad2.gif'),('squirtle1.gif'),('tepig1.gif'),('togepi1.gif');
 
+-- insert dummy marquee data
+INSERT INTO marquees (content, created, has_url, href) VALUES
+('What an accomplishment!', 'Thu Apr 07 2022 20:06:10', 1, 'http://pudim.com.br'),
+('Go to prod!', 'Thu Apr 07 2022 20:06:10', 1, 'https://gchan.com.br/'),
+('Look ma, no link!', 'Thu Apr 07 2022 20:06:10', 0, '');
+
 /* output from SELECT * FROM pg_catalog.pg_tables WHERE tableowner = 'gchan';
  schemaname |  tablename   |   tableowner   | tablespace | hasindexes | hasrules | hastriggers | rowsecurity
 ------------+--------------+----------------+------------+------------+----------+-------------+-------------

@@ -354,7 +354,7 @@ app.post("/messages", async (req, res) => {
  *       404:
  *         description: The message you are replying to does not exists.
  *       500:
- *         description: Something went awfully wrong. Please report to <https://twitter.com/gui_garcia67>
+ *         description: Something went awfully wrong. Please report via <https://github.com/guites/gchan-backend/issues>
  */
 app.post("/replies", async (req, res) => {
   replies.postReply(req).then((reply) => {
@@ -363,8 +363,40 @@ app.post("/replies", async (req, res) => {
   });
 });
 
+/**
+ * @openapi
+ * /marquee:
+ *   post:
+ *     description: Adds a new marquee item.
+ *     consumes:
+ *       - application/json
+ *     parameters:
+ *       - in: body
+ *         name: marquee
+ *         description: The marquee item to be created.
+ *         required: true
+ *         schema:
+ *           type: object
+ *           required:
+ *             - content
+ *           properties:      
+ *             content:
+ *               type: string
+ *             has_url:
+ *               type: boolean
+ *             href:
+ *               type: string
+ *     responses:
+ *       201:
+ *         description: Created.
+ *       400:
+ *         description: Validation error. Check the \"details\" property of response object.
+ *       500:
+ *         description: Something went awfully wrong. Please report via <https://github.com/guites/gchan-backend/issues>
+ */
 app.post("/marquee", async (req, res) => {
   marquees.postMarquee(req.body).then((marquee) => {
+    res.status(marquee.status_code);
     res.json(marquee);
   });
 });
