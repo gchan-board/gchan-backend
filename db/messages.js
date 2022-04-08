@@ -18,105 +18,42 @@ const schema = Joi.object().keys({
   recaptcha_token: Joi.string().allow(''),
 });
 
-async function getAll(){
+async function getAll(offset){
+  let sql = 'SELECT * FROM messages WHERE deleted = false ORDER BY updated_at DESC, id DESC'; 
+  if (offset) sql += ' OFFSET $1 LIMIT 15';
+  let client;
 	try{
-		const client = await db.connect();
-		const result = await client.query('SELECT * FROM messages WHERE deleted = false ORDER BY updated_at DESC, id DESC');
-		const results = { 'results': (result) ? result.rows : null};
-		client.release();
-		return results;
+    client = await db.connect();
+		const result = offset ? await client.query(sql, [offset]) : await client.query(sql);
+		return {
+      'results': (result) ? result.rows : null,
+      'status_code': 200
+    };
 	} catch (err){
-		console.error(err);
-	}
-}
-
-async function getAllOffset(offset) {
-  try {
-    const client = await db.connect();
-    const sql = 'SELECT * FROM messages WHERE deleted = false ORDER BY updated_at DESC, id DESC OFFSET $1 LIMIT 15';
-    const value = [offset];
-    try {
-      const query_res = await client.query(sql, value);
-      client.release();
-      if (query_res.rows.length > 0) {
-        const results = {'results': (query_res) ? query_res.rows : null };
-        return results;
-      } else {
-        return {
-          error: true,
-          origin: 'psql',
-          code: 'no results'
-        };
-      }
-
-    } catch (err) {
-      console.log('getAllOffset --- client.query error');
-      console.log(err);
-    }
-  } catch (err) {
-    console.log('getAllOffset --- db.connect error');
-    console.log(err);
+    return {
+      details: err.message ? err.message : JSON.stringify(err),
+      status_code: err.where ? 400 : 500 // if prop `where` is present, it's probably a psql validation error
+    };
+	} finally {
+		client.release();
   }
 }
 
 async function getOne(id) {
+  let client;
   try {
-    const client = await db.connect();
+    client = await db.connect();
     const sql = 'SELECT * FROM messages WHERE id = $1 AND deleted = false';
     const values = [id];
-    try {
-      const query_res = await client.query(sql, values);
-      client.release();
-      if(query_res.rows.length > 0) {
-        const results = {'results': (query_res) ? query_res.rows : null };
-        return results;
-      } else {
-        return {
-          error: true,
-          origin: 'psql',
-          code: 'no results'
-        };
-      }
-    } catch (err) {
-      return {
-        error: true,
-        origin: 'psql',
-        code: err.code
-      }
-    }
+    const query_res = await client.query(sql, values);
+    return { 'results': query_res.rows, 'status_code': 200 };
   } catch (err) {
-    console.error(err);
-  }
-}
-
-async function getManyById(ids) {
-
-  try {
-    const client = await db.connect();
-    const sql = 'SELECT * FROM messages WHERE id = ANY ($1) AND deleted = false';
-    const values = [ids];
-    try {
-      const query_res = await client.query(sql, values);
-      client.release();
-      if(query_res.rows.length > 0) {
-        const results = {'results': (query_res) ? query_res.rows : null };
-        return results;
-      } else {
-        return {
-          error: true,
-          origin: 'psql',
-          code: 'no results'
-        };
-      }
-    } catch (err) {
-      return {
-        error: true,
-        origin: 'psql',
-        code: err.code
-      }
+    return {
+      details: err.message ? err.message : JSON.stringify(err),
+      status_code: err.where ? 400 : 500,
     }
-  } catch (err) {
-    console.error(err);
+  } finally {
+    client.release();
   }
 }
 
@@ -213,10 +150,6 @@ module.exports.getAll = async function(){
 	return getAll();
 }
 
-module.exports.getAllOffset = async function(){
-	return getAllOffset();
-}
-
 module.exports.getOne = async function(){
 	return getOne();
 }
@@ -224,8 +157,6 @@ module.exports.getOne = async function(){
 module.exports = {
   postMessage,
   getAll,
-  getAllOffset,
   getOne,
-  getManyById,
   deleteMessage,
 };

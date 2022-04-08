@@ -31,12 +31,12 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-const messages = require("./db/messages");
 const marquees = require("./db/marquees");
 const replies = require("./db/replies");
 const placeholders = require("./db/placeholders");
 const imgur = require("./db/imgur");
 const app = express();
+const messagesRouter = require('./routes/messages');
 
 // auto generated open-api for express -- start
 const swaggerJsdoc = require('swagger-jsdoc');
@@ -45,10 +45,24 @@ const jsDocsOptions = {
     info: {
       title: 'GCHAN API',
       version: '1.0.0',
-      description: 'Documentation for the [gchan](https://gchan.com.br) API.\n More information in the project\'s [github repository](https://github.com/guites/gchan-backend).\nReach out on twitter! <https://twitter.com/gui_garcia67>',
+      description: 'Documentation for the [gchan](https://gchan.com.br) API.\n\n More information in the project\'s [github repository](https://github.com/guites/gchan-backend).\n\n Reach out on twitter <https://twitter.com/gui_garcia67>!',
+      contact: {
+        name: 'guilherme garcia',
+        url: 'https://guilhermegarcia.dev'
+      },
+      servers: [
+        {
+          url: 'http://localhost:4450',
+          description: 'Development server',
+        },
+        {
+          url: 'https://gchan-message-board.herokuapp.com',
+          description: 'Production server',
+        }
+      ]
     },
   },
-  apis: ['index.js'],
+  apis: ['./routes/*.js', 'index.js'],
 };
 const jsDocsSpecs = swaggerJsdoc(jsDocsOptions);
 const swaggerUi = require('swagger-ui-express');
@@ -66,6 +80,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
+app.use('/messages', messagesRouter);
 
 // para receber imagens/videos e enviar pro imgur
 app.use(express.static("uploads"));
@@ -83,67 +98,6 @@ app.get("/", (req, res) => {
   res.json({
     message: "This is the API for the gchan project <https://gchan.com.br>. Please visit </api-docs> for more information.",
   });
-});
-
-/**
- * @openapi
- * /messages:
- *   get:
- *     description: Returns all existing posts in the database.
- *     responses:
- *       200:
- *         description: Success.
- */
-app.get("/messages", async (req, res) => {
-  messages.getAll().then((allMessages) => {
-    res.json(allMessages);
-  });
-});
-
-/**
- * @openapi
- * /messages/{offset}:
- *   get:
- *     description: Returns posts from the database, offset by {offset}, with a limited of 15.
- *     parameters:
- *      - in: path
- *        name: offset
- *        schema:
- *          type: integer
- *        required: true
- *        description: number of posts to be skipped when fetching from database
- *     responses:
- *       200:
- *         description: Success.
- */
-app.get("/messages/:offset", async (req, res) => {
-  messages.getAllOffset(req.params.offset).then((messages) => {
-    res.json(messages);
-  });
-});
-
-/**
- * @openapi
- * /message/{id}:
- *   get:
- *     description: Return post with an id of {id}.
- *     parameters:
- *      - in: path
- *        name: id
- *        schema:
- *          type: integer
- *        required: true
- *        description: Numeric id of post to be retrieved
- *     responses:
- *       200:
- *         description: Success.
- */
-app.get("/message/:id", async (req, res) => {
-  const ids = req.params.id.split(",");
-  if (ids.length > 1) {
-    messages.getManyById(ids).then((messages) => res.json(messages));
-  }
-  messages.getOne(req.params.id).then((message) => res.json(message));
 });
 
 /**
@@ -179,7 +133,7 @@ app.get("/replies", async (req, res) => {
  *       400:
  *         description: Validation error. Check the \"details\" property of response object.
  *       500:
- *         description: unexpected error. Please report via <https://github.com/guites/gchan-backend/issues>.
+ *         description: Unexpected error. Please report via <https://github.com/guites/gchan-backend/issues>.
  */
 app.get("/replies/:post_id", async (req, res) => {
   replies
@@ -268,54 +222,6 @@ app.get("/placeholders/:file", function (req, res, next) {
     res.status(404); res.json("'message': 'File not found.'");
   }
   res.sendFile(filePath);
-});
-
-/**
- * @openapi
- * /messages:
- *   post:
- *     description: Adds a new post.
- *     consumes:
- *       - application/json
- *     parameters:
- *       - in: body
- *         name: post
- *         description: The post to create.
- *         required: true
- *         schema:
- *           type: object
- *           required:
- *             - message
- *           properties:             
- *             username:
- *               type: string
- *             subject:
- *               type: string
- *             message:
- *               type: string
- *             imageURL:
- *               type: string
- *             giphyURL:
- *               type: string
- *             options:
- *               type: string
- *             user_id:
- *               type: integer
- *             gif_origin:
- *               type: string
- *     responses:
- *       201:
- *         description: Created.
- *       400:
- *         description: Validation error. Check the \"details\" property of response object.
- *       500:
- *         description: An unexpected situation arised. Run to the hills.
- */
-app.post("/messages", async (req, res) => {
-  messages.postMessage(req).then((message) => {
-    res.status(message.status_code);
-    res.json(message);
-  });
 });
 
 /**
