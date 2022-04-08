@@ -31,12 +31,12 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-const marquees = require("./db/marquees");
 const placeholders = require("./db/placeholders");
 const imgur = require("./db/imgur");
 const app = express();
 const messagesRouter = require('./routes/messages');
 const repliesRouter = require('./routes/replies');
+const marqueesRouter = require('./routes/marquees');
 
 // auto generated open-api for express -- start
 const swaggerJsdoc = require('swagger-jsdoc');
@@ -82,6 +82,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use('/messages', messagesRouter);
 app.use('/replies', repliesRouter);
+app.use('/marquees', marqueesRouter);
 
 // para receber imagens/videos e enviar pro imgur
 app.use(express.static("uploads"));
@@ -98,21 +99,6 @@ app.use(express.static("uploads"));
 app.get("/", (req, res) => {
   res.json({
     message: "This is the API for the gchan project <https://gchan.com.br>. Please visit </api-docs> for more information.",
-  });
-});
-
-/**
- * @openapi
- * /marquee:
- *   get:
- *     description: Returns latest 5 created marquees in the database.
- *     responses:
- *       200:
- *         description: Success.
- */
-app.get("/marquee", async (req, res) => {
-  marquees.getAll().then((allMarquees) => {
-    res.json(allMarquees);
   });
 });
 
@@ -158,44 +144,6 @@ app.get("/placeholders/:file", function (req, res, next) {
     res.status(404); res.json("'message': 'File not found.'");
   }
   res.sendFile(filePath);
-});
-
-/**
- * @openapi
- * /marquee:
- *   post:
- *     description: Adds a new marquee item.
- *     consumes:
- *       - application/json
- *     parameters:
- *       - in: body
- *         name: marquee
- *         description: The marquee item to be created.
- *         required: true
- *         schema:
- *           type: object
- *           required:
- *             - content
- *           properties:      
- *             content:
- *               type: string
- *             has_url:
- *               type: boolean
- *             href:
- *               type: string
- *     responses:
- *       201:
- *         description: Created.
- *       400:
- *         description: Validation error. Check the \"details\" property of response object.
- *       500:
- *         description: Something went awfully wrong. Please report via <https://github.com/guites/gchan-backend/issues>
- */
-app.post("/marquee", async (req, res) => {
-  marquees.postMarquee(req.body).then((marquee) => {
-    res.status(marquee.status_code);
-    res.json(marquee);
-  });
 });
 
 app.post("/imgupload", upload.single("image"), async (req, res) => {
