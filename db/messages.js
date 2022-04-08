@@ -138,6 +138,31 @@ async function postMessage(message){
   }
 }
 
+async function getPostReplies(message_id) {
+  let client;
+  try {
+    const sql = 'SELECT * FROM replies WHERE message_id = $1 ORDER BY id ASC';
+    const values = [message_id];
+    client = await db.connect();
+    const query_res = await client.query(sql,values);
+    return {
+      "results": query_res.rows,
+      "status_code": 200
+    };
+  } catch (err){
+    return {
+      details: err.message ? err.message : JSON.stringify(err),
+      status_code: err.where ? 400 : 500,
+    };
+  } finally {
+    client.release();
+  }
+}
+
+module.exports.getPostReplies = async function() {
+  return getPostReplies();
+}
+
 module.exports.deleteMessage = async function(){
   return deleteMessage();
 }
@@ -159,4 +184,5 @@ module.exports = {
   getAll,
   getOne,
   deleteMessage,
+  getPostReplies,
 };

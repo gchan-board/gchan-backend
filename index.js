@@ -32,11 +32,11 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 const marquees = require("./db/marquees");
-const replies = require("./db/replies");
 const placeholders = require("./db/placeholders");
 const imgur = require("./db/imgur");
 const app = express();
 const messagesRouter = require('./routes/messages');
+const repliesRouter = require('./routes/replies');
 
 // auto generated open-api for express -- start
 const swaggerJsdoc = require('swagger-jsdoc');
@@ -81,6 +81,7 @@ app.use(cors(corsOptions));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use('/messages', messagesRouter);
+app.use('/replies', repliesRouter);
 
 // para receber imagens/videos e enviar pro imgur
 app.use(express.static("uploads"));
@@ -98,71 +99,6 @@ app.get("/", (req, res) => {
   res.json({
     message: "This is the API for the gchan project <https://gchan.com.br>. Please visit </api-docs> for more information.",
   });
-});
-
-/**
- * @openapi
- * /replies:
- *   get:
- *     description: Returns all existing replies in the database.
- *     responses:
- *       200:
- *         description: Success.
- */
-app.get("/replies", async (req, res) => {
-  replies.getAll().then((allReplies) => {
-    res.json(allReplies);
-  });
-});
-
-/**
- * @openapi
- * /replies/{post_id}:
- *   get:
- *     description: Return all replies from post with an id of {post_id}.
- *     parameters:
- *      - in: path
- *        name: post_id
- *        schema:
- *          type: integer
- *        required: true
- *        description: Numeric id of post which you want the replies of
- *     responses:
- *       200:
- *         description: Success.
- *       400:
- *         description: Validation error. Check the \"details\" property of response object.
- *       500:
- *         description: Unexpected error. Please report via <https://github.com/guites/gchan-backend/issues>.
- */
-app.get("/replies/:post_id", async (req, res) => {
-  replies
-    .getReplyFromMessageId(req.params.post_id)
-    .then((replies) => {
-      res.status(replies.status_code);
-      res.json(replies.results);
-    });
-});
-
-/**
- * @openapi
- * /reply/{id}:
- *   get:
- *     description: Returns reply with an id of {id}.
- *     parameters:
- *      - in: path
- *        name: id
- *        schema:
- *          type: integer
- *        required: true
- *        description: Numeric id of reply to be retrieved
- *     responses:
- *       200:
- *         description: Success.
- */
-app.get("/reply/:id", async (req, res) => {
-  // TODO: correctly return status codes for error, 404, etc
-  replies.getOne(req.params.id).then((reply) => res.json(reply));
 });
 
 /**
@@ -222,51 +158,6 @@ app.get("/placeholders/:file", function (req, res, next) {
     res.status(404); res.json("'message': 'File not found.'");
   }
   res.sendFile(filePath);
-});
-
-/**
- * @openapi
- * /replies:
- *   post:
- *     description: Adds a new reply to a post.
- *     consumes:
- *       - application/json
- *     parameters:
- *       - in: body
- *         name: reply
- *         description: The reply to add to a post.
- *         required: true
- *         schema:
- *           type: object
- *           required:
- *             - content
- *             - message_id
- *           properties:      
- *             username:
- *               type: string
- *             content:
- *               type: string
- *             imageURL:
- *               type: string
- *             user_id:
- *               type: integer
- *             message_id:
- *               type: integer
- *     responses:
- *       201:
- *         description: Created.
- *       400:
- *         description: Validation error. Check the \"details\" property of response object.
- *       404:
- *         description: The message you are replying to does not exists.
- *       500:
- *         description: Something went awfully wrong. Please report via <https://github.com/guites/gchan-backend/issues>
- */
-app.post("/replies", async (req, res) => {
-  replies.postReply(req).then((reply) => {
-    res.status(reply.status_code);
-    res.json(reply);
-  });
 });
 
 /**

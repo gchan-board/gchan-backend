@@ -57,6 +57,35 @@ router.get("/:id", async (req, res) => {
 });
 
 /**
+ * @openapi
+ * /messages/{id}/replies:
+ *   get:
+ *     description: Return all replies from post with an id of {id}.
+ *     parameters:
+ *      - in: path
+ *        name: id
+ *        schema:
+ *          type: integer
+ *        required: true
+ *        description: Numeric id of post which you want the replies of
+ *     responses:
+ *       200:
+ *         description: Success.
+ *       400:
+ *         description: Validation error. Check the \"details\" property of response object.
+ *       500:
+ *         description: Unexpected error. Please report via <https://github.com/guites/gchan-backend/issues>.
+ */
+router.get("/:id/replies", async (req, res) => {
+  messages
+    .getPostReplies(req.params.id)
+    .then((replies) => {
+      res.status(replies.status_code);
+      res.json(replies.results);
+    });
+});
+
+/**
  * @swagger
  * /messages:
  *   post:

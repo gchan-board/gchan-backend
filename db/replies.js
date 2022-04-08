@@ -81,40 +81,8 @@ async function postReply(reply) {
       "details": err.message ? err.message : JSON.stringify(err),
     }
   }
-      
-    
 }
 
-async function getReplyFromMessageId(message_id) {
-  try {
-    const sql = 'SELECT * FROM replies WHERE message_id = $1 ORDER BY id ASC';
-    const values = [message_id];
-    const client = await db.connect();
-    const query_res = await client.query(sql,values);
-    client.release();
-    return {
-      "results" :query_res.rows,
-      "status_code": 200
-    };
-  } catch (err){
-    if (err.code == '22P02') {
-      return {
-        results: {
-          error: true,
-          details: 'Post Id must be and integer!',
-        },
-        status_code: 400,
-      };
-    }
-    return {
-      status_code: 500,
-      results: {
-        error: true,
-        details: "Something went horribly wrong!",
-      }
-    }
-  }
-}
 async function getAll() {
   try {
     const client = await db.connect();
@@ -206,14 +174,9 @@ module.exports.postReply = async function(){
   return postReply();
 }
 
-module.exports.getReplyFromMessageId = async function(){
-  return getReplyFromMessageId();
-}
-
 module.exports = {
   getOne,
   getManyById,
   getAll,
   postReply,
-  getReplyFromMessageId,
 };
