@@ -3,7 +3,6 @@ const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const morgan = require("morgan");
-const fs = require('fs'); 
 
 const unless = function (path, middleware) {
   return function (req, res, next) {
@@ -31,12 +30,12 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-const placeholders = require("./db/placeholders");
 const imgur = require("./db/imgur");
 const app = express();
 const messagesRouter = require('./routes/messages');
 const repliesRouter = require('./routes/replies');
 const marqueesRouter = require('./routes/marquees');
+const placeholdersRouter = require('./routes/placeholders');
 
 // auto generated open-api for express -- start
 const swaggerJsdoc = require('swagger-jsdoc');
@@ -83,6 +82,7 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use('/messages', messagesRouter);
 app.use('/replies', repliesRouter);
 app.use('/marquees', marqueesRouter);
+app.use('/placeholders', placeholdersRouter);
 
 // para receber imagens/videos e enviar pro imgur
 app.use(express.static("uploads"));
@@ -102,49 +102,6 @@ app.get("/", (req, res) => {
   });
 });
 
-/**
- * @openapi
- * /placeholders:
- *   get:
- *     description: Redirects to a random registered placeholder image from the database.
- *     responses:
- *       200:
- *         description: Success.
- */
-app.get("/placeholders", async function (req, res, next) {
-  placeholders.getRandom().then((placeholder) => {
-    const protc = req.secure ? "https://" : "http://";
-    res.redirect(
-      protc + req.get("host") + "/placeholders/" + placeholder.results[0].file
-    );
-  });
-});
-
-/**
- * @openapi
- * /placeholders/{file}:
- *   get:
- *     description: Server a placeholder named {file} as an image.
- *     parameters:
- *      - in: path
- *        name: file
- *        schema:
- *          type: string
- *        required: true
- *        description: file name of the image to be served
- *     responses:
- *       200:
- *         description: Success.
- *       404:
- *          description: File not found.
- */
-app.get("/placeholders/:file", function (req, res, next) {
-  const filePath = __dirname + "/placeholders/" + req.params.file;
-  if (!fs.existsSync(filePath)) {
-    res.status(404); res.json("'message': 'File not found.'");
-  }
-  res.sendFile(filePath);
-});
 
 app.post("/imgupload", upload.single("image"), async (req, res) => {
   imgur.postImg(req.file.path, req.file.originalname).then((resp) => {
