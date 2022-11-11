@@ -33,7 +33,7 @@ router.get("/", async (req, res) => {
  *       200:
  *         description: Success.
  */
-router.get("/reply/:id", async (req, res) => {
+router.get("/:id", async (req, res) => {
   // TODO: correctly return status codes for error, 404, etc
   replies.getOne(req.params.id).then((reply) => res.json(reply));
 });
