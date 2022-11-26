@@ -4,38 +4,13 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 const morgan = require("morgan");
 
-const unless = function (path, middleware) {
-  return function (req, res, next) {
-    if (path.includes(req.path)) {
-      return next();
-    } else {
-      return middleware(req, res, next);
-    }
-  };
-};
-
-const fileUpload = require("express-fileupload");
-
-// para receber imagens/videos e enviar pro imgur
-const multer = require("multer");
-const uuid = require("uuid").v4;
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads");
-  },
-  filename: (req, file, cb) => {
-    const { originalname } = file;
-    cb(null, `${uuid()}-${originalname}`);
-  },
-});
-const upload = multer({ storage });
-
-const imgur = require("./db/imgur");
 const app = express();
+
 const messagesRouter = require('./routes/messages');
 const repliesRouter = require('./routes/replies');
 const marqueesRouter = require('./routes/marquees');
 const placeholdersRouter = require('./routes/placeholders');
+const imgurRouter = require('./routes/imgur');
 
 // auto generated open-api for express -- start
 const swaggerJsdoc = require('swagger-jsdoc');
@@ -68,8 +43,6 @@ const swaggerUi = require('swagger-ui-express');
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(jsDocsSpecs));
 // auto generated open-api for express -- end
 
-app.use(unless(["/videoupload", "/gifupload", "/imgupload"], fileUpload()));
-
 app.use(morgan("tiny"));
 
 const corsOptions = {
@@ -83,6 +56,7 @@ app.use('/messages', messagesRouter);
 app.use('/replies', repliesRouter);
 app.use('/marquees', marqueesRouter);
 app.use('/placeholders', placeholdersRouter);
+app.use('/imgur', imgurRouter);
 
 // para receber imagens/videos e enviar pro imgur
 app.use(express.static("uploads"));
@@ -99,31 +73,6 @@ app.use(express.static("uploads"));
 app.get("/", (req, res) => {
   res.json({
     message: "This is the API for the gchan project <https://gchan.com.br>. Please visit </api-docs> for more information.",
-  });
-});
-
-
-app.post("/imgupload", upload.single("image"), async (req, res) => {
-  imgur.postImg(req.file.path, req.file.originalname).then((resp) => {
-    res.json(resp);
-  });
-});
-
-app.post("/gifupload", upload.single("image"), async (req, res) => {
-  imgur.postGif(req.file.path, req.file.originalname).then((resp) => {
-    res.json(resp);
-  });
-});
-
-app.post("/videoupload", upload.single("video"), async (req, res) => {
-  imgur.postVideo(req.file.path, req.file.originalname).then((resp) => {
-    res.json(resp);
-  });
-});
-
-app.delete("/imgur/:deletehash", (req, res) => {
-  imgur.deleteImgur(req.params.deletehash).then((resp) => {
-    res.json(resp);
   });
 });
 
