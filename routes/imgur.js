@@ -39,8 +39,21 @@ const uploadHandler = multer({ storage }).single('file');
 router.post("/images", async (req, res) => {
   uploadHandler(req, res, function(err) {
     if (err) {
-      err.message == 'Multipart: Boundary not found' ? res.status(400) : res.status(500);
-      return res.json({ details: 'Please check that your file is not corrupted.' });
+      let details;
+      switch (err.message.trim()) {
+        case 'Unexpected field':
+          res.status(400);
+          details = `Unexpected field "${err.field}". Please check documentation at /api-docs/#/default/post_imgur_images`
+          break;
+        case 'Multipart: Boundary not found':
+          res.status(400);
+          details = 'Please check that your file is not corrupted.';
+          break;
+        default:
+          res.status(500);
+          details = 'Unexpected error. Please report via <https://github.com/guites/gchan-backend/issues>';
+      }
+      return res.json({ details });
     }
     if (!req.file || req.file == '') {
       res.status(400);
@@ -75,8 +88,21 @@ router.post("/images", async (req, res) => {
 router.post("/videos", async (req, res) => {
   uploadHandler(req, res, function(err) {
     if (err) {
-      err.message == 'Multipart: Boundary not found' ? res.status(400) : res.status(500);
-      return res.json({ details: 'Please check that your file is not corrupted.' });
+      let details;
+      switch (err.message.trim()) {
+        case 'Unexpected field':
+          res.status(400);
+          details = `Unexpected field "${err.field}". Please check documentation at /api-docs/#/default/post_imgur_images`
+          break;
+        case 'Multipart: Boundary not found':
+          res.status(400);
+          details = 'Please check that your file is not corrupted.';
+          break;
+        default:
+          res.status(500);
+          details = 'Unexpected error. Please report via <https://github.com/guites/gchan-backend/issues>';
+      }
+      return res.json({ details });
     }
     if (!req.file || req.file == '') {
       res.status(400);
