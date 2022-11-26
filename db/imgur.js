@@ -56,22 +56,42 @@ async function deleteImgur(deletehash) {
 		.catch(error => error);
 }
 
+async function getInformation(imgur_id) {
+  const response = await fetch(`https://api.imgur.com/3/image/${imgur_id}`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Client-ID ${process.env.IMGUR_CLIENT_ID}`,
+    },
+    redirect: 'follow'
+  });
+  if (!response.ok) {
+    return {
+      status: 404,
+      details: 'File not found.'
+    }
+  }
+  return response.json();
+}
+
 module.exports.postImg = async function(){
 	return postImg();
 }
-module.exports.postGif = async function(){
-	return postGif();
-}
+
 module.exports.postVideo = async function(){
 	return postVideo();
 }
+
 module.exports.deleteImgur = async function(){
 	return deleteImgur();
+}
+
+module.exports.getInformation = async function(){
+  return getInformation();
 }
 
 module.exports = {
   postImg,
   postVideo,
   deleteImgur,
-  postGif,
+  getInformation,
 }
