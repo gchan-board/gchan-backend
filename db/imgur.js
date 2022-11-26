@@ -1,13 +1,16 @@
 const fetch = require('node-fetch');
 const FormData = require('form-data');
 const fs = require("fs");
+const { mockImgurUpload, mockImgurDelete, mockImgurInformation } = require('../helpers');
+const environment = process.env.NODE_ENV;
 
 async function postImg(filepath, filename) {
-  const form = new FormData();
   if (!fs.existsSync(filepath)) {
     return { status_code: 500, details: "We couldn't find your image! Please try uploading one more time." }
   }
   const imgFile = fs.readFileSync(filepath);
+  if (environment === 'development') return mockImgurUpload(filepath);
+  const form = new FormData();
   form.append("image", imgFile, filename);
   const requestOptions = {
     method: 'POST',
@@ -24,11 +27,12 @@ async function postImg(filepath, filename) {
 }
 
 async function postVideo(filepath, filename) {
-  const formdata = new FormData();
   if (!fs.existsSync(filepath)) {
     return { status_code: 500, details: "We couldn't find your video! Please try uploading one more time." }
   }
   const videoFile = fs.readFileSync(filepath);
+  if (environment === 'development') return mockImgurUpload(filepath);
+  const formdata = new FormData();
   formdata.append("video", videoFile,filename);
   const requestOptions = {
     method: 'POST',
@@ -45,6 +49,7 @@ async function postVideo(filepath, filename) {
 }
 
 async function deleteImgur(deletehash) {
+  if (environment === 'development') return mockImgurDelete();
 	return fetch(`https://api.imgur.com/3/image/${deletehash}`, {
         method: 'DELETE',
         headers: {
@@ -57,6 +62,7 @@ async function deleteImgur(deletehash) {
 }
 
 async function getInformation(imgur_id) {
+  if (environment === 'development') return mockImgurInformation();
   const response = await fetch(`https://api.imgur.com/3/image/${imgur_id}`, {
     method: 'GET',
     headers: {

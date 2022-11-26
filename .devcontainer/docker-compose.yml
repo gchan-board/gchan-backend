@@ -11,9 +11,11 @@ services:
         # Use -bullseye variants on local arm64/Apple Silicon.
         VARIANT: 16-bullseye
     environment:
-      - DATABASE_URL=postgresql://gchan:gchan@localhost:5432/gchan
       - NODE_ENV=development
-      - CORS_ORIGIN_URL=http://localhost:8080
+      - DATABASE_URL=postgresql://gchan:gchan@localhost:5432/gchan
+      - CORS_ORIGIN_URL=*
+      - RECAPTCHA3_KEY=unnecessary-in-development
+      - IMGUR_CLIENT_ID=unnecessary-in-development
     volumes:
       - ..:/workspace:cached
     # Overrides default command so things don't shut down after the process ends.
