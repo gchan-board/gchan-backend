@@ -6,6 +6,8 @@ function mockImgurUpload(filepath) {
   // TODO: adapt this for multiple possible hosts/ports combinations
   // TODO: prevent direct access to uploads file on production
   return {
+    status: 200,
+    success: true,
     data: {
       link: `http://localhost:4450/${filepath.replace("uploads/", "")}`,
       processing: {
