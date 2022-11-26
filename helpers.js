@@ -2,9 +2,11 @@ const fetch = require('node-fetch');
 const FormData = require('form-data');
 const db = require('./db/connection');
 
-function mockImgurUpload(filepath) {
+async function mockImgurUpload(filepath) {
   // TODO: adapt this for multiple possible hosts/ports combinations
   // TODO: prevent direct access to uploads file on production
+  const fileTypeFromFile = (await import('file-type')).fileTypeFromFile
+  const { mime } = await fileTypeFromFile(`${process.cwd()}/${filepath}`);
   return {
     status: 200,
     success: true,
@@ -14,6 +16,7 @@ function mockImgurUpload(filepath) {
         status: "completed",
       },
       deletehash: "dummy-delete-hash",
+      type: mime,
     }
   }
 }

@@ -86,6 +86,7 @@ router.post("/images", async (req, res) => {
  *         description: Unexpected error. Please report via <https://github.com/guites/gchan-backend/issues>.
  */
 router.post("/videos", async (req, res) => {
+  // TODO: validate file type and size
   uploadHandler(req, res, function(err) {
     if (err) {
       let details;

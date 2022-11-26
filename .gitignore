@@ -2,3 +2,4 @@ heroku.log
 .env
 .nvmrc
 node_modules
+uploads/*
